@@ -1,28 +1,11 @@
-// use an integer for version numbers
+// ! Bu araç @ByAyzen tarafından | @CS-Karma için yazılmıştır.
 version = 2
 
-
 cloudstream {
-    // All of these properties are optional, you can safely remove them
-
-    description = "(Mexican) Anime Extension"
+    authors     = listOf("ByAyzen")
     language    = "mx"
-    authors = listOf("Phisher98")
-
-    /**
-    * Status int as the following:
-    * 0: Down
-    * 1: Ok
-    * 2: Slow
-    * 3: Beta only
-    * */
-    status = 1 // will be 3 if unspecified
-
-    // List of video source types. Users are able to filter for extensions in a given category.
-    // You can find a list of available types here:
-    // https://recloudstream.github.io/cloudstream/html/app/com.lagradost.cloudstream3/-tv-type/index.html
-    tvTypes = listOf("Anime", "AnimeMovie", "OVA")
-    iconUrl = "https://latanime.org/public/img/logito.png"
-
-    isCrossPlatform = false
+    description = "odos los anime con Doblaje Latino/Castellano solo aquí en Latanime. Animes de estreno, subtitulado al español y con Audio Latino o Castellano, Online, HD y gratis. Para descargar por MEGA, Mediafire o Drive sin limites."
+    status  = 1 // will be 3 if unspecified
+    tvTypes = listOf("Anime", "AnimeMovie", "OVA") //Movie, AnimeMovie, TvSeries, Cartoon, Anime, OVA, Torrent, Documentary, AsianDrama, Live, NSFW, Others, Music, AudioBook, CustomMedia, Audio, Podcast,
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://latanime.org/&size=16"
 }
