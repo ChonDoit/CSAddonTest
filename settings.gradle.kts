@@ -1,18 +1,23 @@
 rootProject.name = "CloudstreamPlugins"
 
-// This file sets what projects are included. All new projects should get automatically included unless specified in "disabled" variable.
-val disabled = listOf<String>()
+val disabled = listOf("build", "gradle", "app") // Add folders to skip here
 
-File(rootDir, ".").eachDir { dir ->
-    if (!disabled.contains(dir.name) && File(dir, "build.gradle.kts").exists()) {
-        include(dir.name)
+/**
+ * Recursively finds and includes Gradle projects.
+ */
+fun includeProjects(dir: File) {
+    dir.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.forEach { subDir ->
+        if (disabled.contains(subDir.name)) return@forEach
+
+        if (File(subDir, "build.gradle.kts").exists()) {
+            // Calculate the path relative to the root (e.g., "movies/provider1")
+            val projectPath = subDir.relativeTo(rootDir).path.replace(File.separator, ":")
+            include(":$projectPath")
+        } else {
+            // If no build file here, look deeper into the sub-directory
+            includeProjects(subDir)
+        }
     }
 }
 
-
-fun File.eachDir(block: (File) -> Unit) {
-    listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
-}
-
-// To only include a single project, comment out the previous lines (except the first one), and include your plugin like so:
-// include("PluginName")
+includeProjects(rootDir)

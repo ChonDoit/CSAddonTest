@@ -17,13 +17,6 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
     }
 }
-//json change may need to change in future to remove this
-
-/*
-w: file:///home/runner/work/cloudstream-extensions-phisher/cloudstream-extensions-phisher/src/StremioX/src/main/kotlin/com/phisher98/StremioX.kt:478:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
-- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
-- To keep applying to the value parameter only, use the '@param:' annotation target.
- */
 
 subprojects {
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
@@ -51,12 +44,12 @@ subprojects {
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
     cloudstream {
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/phisher98/cloudstream-extensions-phisher")
-        authors = listOf("Phisher98")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/ChonDoit/CSAddonTest")
+        authors = listOf("ChonDoit")
     }
 
     android {
-        namespace = "com.phisher98"
+        namespace = "com.chondoit"
 
         defaultConfig {
             minSdk = 21
@@ -102,6 +95,8 @@ subprojects {
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
         implementation("com.github.vidstige:jadb:v1.2.1")
         implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
+        implementation("com.squareup.okhttp3:okhttp:4.12.0")
+        implementation("androidx.annotation:annotation:1.9.1")
     }
 }
 
