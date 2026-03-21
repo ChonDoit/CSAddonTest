@@ -40,14 +40,14 @@ class Animeav1 : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
 
     override val mainPage = mainPageOf(
-        "catalogo?status=emision" to "Emision",
+        "catalogo?status=emision" to "Emisión",
         "catalogo?status=finalizado" to "Finalizado",
-        "catalogo?category=pelicula" to "Pelicula",
+        "catalogo?category=pelicula" to "Película",
         "catalogo?category=ova" to "OVA",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}&page=$page").document
+        val document = app.get("$mainUrl/${request.data}&page=$page").documentLarge
         val home     = document.select("article").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(
             list    = HomePageList(
@@ -69,7 +69,7 @@ class Animeav1 : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("${mainUrl}/catalogo?search=$query").document
+        val document = app.get("${mainUrl}/catalogo?search=$query").documentLarge
         val results = document.select("article").mapNotNull { it.toSearchResult() }
         return results
     }
@@ -85,7 +85,7 @@ class Animeav1 : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document    = app.get(url).document
+        val document    = app.get(url).documentLarge
         val title       = document.selectFirst("article h1")?.text() ?: "Desconocido"
         val poster      = document.select("img.aspect-poster").attr("src")
         val description = document.selectFirst("div.entry.text-lead p")?.text()
@@ -146,7 +146,7 @@ class Animeav1 : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val document = app.get(data).documentLarge
 
         val scriptHtml = document.select("script")
             .firstOrNull { it.html().contains("__sveltekit_") }
@@ -179,12 +179,14 @@ class Animeav1 : MainAPI() {
                 return list
             }
 
-            val subEmbeds = extractLinks("SUB")
+            // PROCESAR PRIMERO DUB (DOBLADO), LUEGO SUB (SUBTITULADO)
             val dubEmbeds = extractLinks("DUB")
+            val subEmbeds = extractLinks("SUB")
 
-            subEmbeds.forEach { (server, url) ->
+            // Procesar enlaces doblados primero
+            dubEmbeds.forEach { (server, url) ->
                 loadCustomExtractor(
-                    "Animeav1 [SUB:$server]",
+                    "Animeav1 [DUB:$server]",
                     url,
                     "",
                     subtitleCallback,
@@ -192,9 +194,10 @@ class Animeav1 : MainAPI() {
                 )
             }
 
-            dubEmbeds.forEach { (server, url) ->
+            // Procesar enlaces subtitulados después
+            subEmbeds.forEach { (server, url) ->
                 loadCustomExtractor(
-                    "Animeav1 [DUB:$server]",
+                    "Animeav1 [SUB:$server]",
                     url,
                     "",
                     subtitleCallback,
