@@ -1,23 +1,31 @@
 rootProject.name = "CloudstreamPlugins"
 
-val disabled = listOf("build", "gradle", "app") // Add folders to skip here
+// 1. Define your categories clearly
+val categories = listOf(
+    "Anime",
+    "Cartoons",
+    "Doramas",
+    "IPTV",
+    "Streaming",
+    "Torrents"
+)
 
-/**
- * Recursively finds and includes Gradle projects.
- */
-fun includeProjects(dir: File) {
-    dir.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.forEach { subDir ->
-        if (disabled.contains(subDir.name)) return@forEach
-
-        if (File(subDir, "build.gradle.kts").exists()) {
-            // Calculate the path relative to the root (e.g., "movies/provider1")
-            val projectPath = subDir.relativeTo(rootDir).path.replace(File.separator, ":")
-            include(":$projectPath")
-        } else {
-            // If no build file here, look deeper into the sub-directory
-            includeProjects(subDir)
-        }
+// 2. Loop through each category folder
+categories.forEach { category ->
+    val categoryDir = File(rootDir, category)
+    
+    if (categoryDir.exists() && categoryDir.isDirectory) {
+        // 3. Find every provider folder inside that category
+        categoryDir.listFiles()
+            ?.filter { it.isDirectory && File(it, "build.gradle.kts").exists() }
+            ?.forEach { provider ->
+                
+                // This creates the module ":Anime:AnimeAV"
+                val projectPath = ":${category}:${provider.name}"
+                include(projectPath)
+                
+                // Tell Gradle exactly where the folder is located
+                project(projectPath).projectDir = provider
+            }
     }
 }
-
-includeProjects(rootDir)
