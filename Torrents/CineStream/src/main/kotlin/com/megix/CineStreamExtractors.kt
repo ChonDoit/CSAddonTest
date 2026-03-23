@@ -69,6 +69,7 @@ import com.megix.ApiConstants.gojoBaseAPI
 import com.megix.ApiConstants.hdmovie2API
 import com.megix.ApiConstants.hexaAPI
 import com.megix.ApiConstants.hianimeAPI
+import com.megix.ApiConstants.kaidoAPI
 import com.megix.ApiConstants.hindMoviezAPI
 import com.megix.ApiConstants.kissKhAPI
 import com.megix.ApiConstants.levidiaAPI
@@ -153,6 +154,8 @@ object CineStreamExtractors {
     ) {
         val mal_response = app.get("$malsyncAPI/mal/anime/${malId ?: return}").parsedSafe<MALSyncResponses>()
 
+        Log.d("Malsync", "mal_response: $mal_response")
+
         val title = mal_response?.title
         val malsync = mal_response?.sites
         val zorotitle = malsync?.zoro?.firstNotNullOf { it.value["title"] }?.replace(":", " ")
@@ -161,6 +164,8 @@ object CineStreamExtractors {
 
         // Package the API results for the registry
         val malData = MalSyncData(title, zorotitle, hianimeurl, animepaheUrl, aniId, episode, year, origin)
+
+        Log.d("Malsync", "malData: $malData")
 
         val executionList = Settings.activeProviderOrder.mapNotNull { key ->
             ProviderRegistry.builtInProviders.find { it.key == key }?.executeMalSync?.let { action ->
@@ -1052,7 +1057,9 @@ object CineStreamExtractors {
             val encryptedEmbed = JSONObject(embedRespStr).getString("result")
             if (encryptedEmbed.isEmpty()) return@safeAmap
             val embed_url = decrypt(encryptedEmbed)
-            loadExtractor(embed_url, "Yflix", subtitleCallback, callback)
+
+            Log.d("Yflix", "embed_url: $embed_url")
+            MegaUp().getUrl(embed_url, "Yflix", subtitleCallback, callback)
         }
     }
 
@@ -3146,6 +3153,59 @@ object CineStreamExtractors {
         )
     }
 
+    suspend fun invokeKaido(
+        url: String? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        Log.d("Kaido", "url: $url")
+
+        val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        val hiId = url?.substringAfterLast("/") ?: return
+        val id = hiId.substringAfterLast("-")
+
+        Log.d("Kaido", "id: $id")
+
+        val epId = app.get(
+            "$kaidoAPI/ajax/episode/list/$id",
+            headers = headers
+        ).parsedSafe<HianimeResponses>()?.html?.let {
+            Jsoup.parse(it)
+        }?.select("div.ss-list a")
+            ?.find { it.attr("data-number") == "${episode ?: 1}" }
+            ?.attr("data-id") ?: return
+
+        Log.d("Kaido", "epId: $epId")
+
+        val servers = app.get(
+            "$kaidoAPI/ajax/episode/servers?episodeId=$epId",
+            headers = headers
+        ).parsedSafe<HianimeResponses>()?.html?.let{
+            Jsoup.parse(it)
+        }?.select("div.item.server-item")
+            ?.map {
+                Triple(
+                    it.text(),
+                    it.attr("data-id"),
+                    it.attr("data-type")
+                )
+            } ?: return
+
+        Log.d("Kaido", "servers: $servers")
+
+        servers.safeAmap { (label, serverId, type) ->
+            val embedUrl = app.get(
+                "$kaidoAPI/ajax/episode/sources?id=$serverId",
+                headers = headers
+            ).parsedSafe<HianimeEpisodeServers>()?.link ?: return@safeAmap
+
+            Log.d("Kaido", "embedUrl: $embedUrl")
+
+            loadCustomExtractor("Kaido[${type.uppercase()}]", embedUrl, "", subtitleCallback, callback)
+        }
+    }
+
     suspend fun invokeHianime(
         url: String? = null,
         episode: Int? = null,
@@ -3922,7 +3982,7 @@ object CineStreamExtractors {
         }
 
         Gson().fromJson(app.get(url, timeout = 1000L).text, StreamifyResponse::class.java).streams.forEach { s ->
-            val title = s.title ?: s.name ?: ""
+            val title = s.description ?: s.title ?: s.name ?: ""
 
             val type = if(s.url.contains(".m3u8") || s.url.contains("hls")) {
                 ExtractorLinkType.M3U8
@@ -4008,7 +4068,7 @@ object CineStreamExtractors {
 
         res?.streams?.forEach { stream ->
 
-            val title = stream.title ?: stream.name ?: ""
+            val title = stream.description ?: stream.title ?: stream.name ?: ""
             val magnet = buildMagnetString(stream)
 
             callback.invoke(
