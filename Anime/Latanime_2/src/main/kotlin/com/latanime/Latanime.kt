@@ -36,14 +36,17 @@ class Latanime : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
 
     override val mainPage = mainPageOf(
+        "animes?fecha=false&genero=false&letra=false&categoria=latino" to "Anime Latino",
         "animes?fecha=false&genero=false&letra=false&categoria=anime" to "Anime",
-        "animes?fecha=false&genero=false&letra=false&categoria=Película" to "Película",
-        "animes?fecha=false&genero=false&letra=false&categoria=especial" to "Especial",
-        "animes?fecha=false&genero=false&letra=false&categoria=donghua" to "Donghua",
+        "animes?fecha=false&genero=false&letra=false&categoria=Película%20Latino" to "Película Latino",
+        "animes?fecha=false&genero=false&letra=false&categoria=Película" to "Película Subtitulado",
+        "animes?fecha=false&genero=false&letra=false&categoria=ova-latino" to "OVA Latino",
+        "animes?fecha=false&genero=false&letra=false&categoria=ova" to "OVA",
+        "animes?fecha=false&genero=false&letra=false&categoria=especial" to "Especial"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}&p=$page").document
+        val document = app.get("$mainUrl/${request.data}&p=$page").documentLarge
         val home     = document.select("div.row a").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(
             list    = HomePageList(
@@ -67,12 +70,12 @@ class Latanime : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("${mainUrl}/buscar?q=$query").document
+        val document = app.get("${mainUrl}/buscar?q=$query").documentLarge
         return document.select("div.row a").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document    = app.get(url).document
+        val document    = app.get(url).documentLarge
         val title       = document.selectFirst("h2")?.text() ?: "Desconocido"
         val poster      = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
         val description = document.selectFirst("h2 ~ p.my-2")?.text()
@@ -112,7 +115,7 @@ class Latanime : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val document = app.get(data).documentLarge
         document.select("#play-video a").map {
             val href = base64Decode(it.attr("data-player")).substringAfter("=")
             loadExtractor(
