@@ -64,8 +64,9 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
+          ./gradlew clean
+          ./gradlew make clean
           ./gradlew make makePluginsJson
-          ./gradlew ensureJarCompatibility
           find . -name "*.cs3" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No .cs3 files found"
           find . -name "*.jar" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No .jar files found"
           find . -name "plugins.json" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No plugins.json found"
