@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class PelisplushdPlugin: Plugin() {
+class Pelisplushd_1Plugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Pelisplushd())
     }
