@@ -64,11 +64,12 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          ./gradlew make clean
           ./gradlew make makePluginsJson
-          find . -name "*.cs3" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No .cs3 files found"
-          find . -name "plugins.json" -path "*/build/*"-exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No plugins.json found"
-
+          ./gradlew ensureJarCompatibility
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
+          cp **/build/*.jar $GITHUB_WORKSPACE/builds
+          cp build/plugins.json $GITHUB_WORKSPACE/builds
+          
       - name: Push builds
         run: |
           cd $GITHUB_WORKSPACE/builds
@@ -76,10 +77,5 @@ jobs:
           git config --local user.name "GitHub Actions"
           git add .
 
-          # Only commit/push if there are changes
-          if [[ -n $(git status -s) ]]; then
-            git commit --amend -m "Build $GITHUB_SHA" || git commit -m "Build $GITHUB_SHA"
-            git push --force
-          else
-            echo "No changes to push"
-          fi
+          git commit --amend -m "Build $GITHUB_SHA" || git commit -m "Build $GITHUB_SHA"
+          git push --force
