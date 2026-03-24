@@ -4,6 +4,8 @@ version = 391
 
 android {
     namespace = "com.megix"
+    namespace = "com.megix"
+    namespace = "com.megix"
     defaultConfig {
         val properties = Properties()
         properties.load(project.rootProject.file("local.properties").inputStream())
