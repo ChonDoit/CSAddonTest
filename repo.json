@@ -1,0 +1,9 @@
+{
+    "name": "Cornelio Repo",
+    "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/RepoIcon.png",
+    "description": "A re-joint of multiple addons into one repository (for personal use)",
+    "manifestVersion": 1,
+    "pluginLists": [
+      "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/refs/heads/builds/plugins.json"
+    ]
+}

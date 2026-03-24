@@ -1,0 +1,687 @@
+[
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?sz=64&domain=animeav1.com",
+        "fileHash": "sha256-8927513d5cfdc26fd9393b021761668dc1ab72470bf3c5969053759a24a0209b",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 28135,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "kraptor",
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 14,
+        "internalName": "AnimeAV",
+        "description": "Disfruta de los \u00faltimos episodios y animes agregados en HD y Sub Espa\u00f1ol. Miles de series, pel\u00edculas y OVAs disponibles para ver online totalmente gratis.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/AnimeAV.cs3",
+        "name": "AnimeAV"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/animeav1.png",
+        "fileHash": "sha256-1bc4d332de94fd7b4894131b4f313497cbfa8139dec8880e50358c85827fa398",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 18676,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 6,
+        "internalName": "Animeav1",
+        "description": "(Mexican) Anime Extension",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Animeav1.cs3",
+        "name": "Animeav1"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=animeflv.net&sz=%size%",
+        "fileHash": "sha256-0deedf967dd9f860bed38e7ef23bae2689151084e357ef1bbc016568eded361b",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 20928,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 6,
+        "internalName": "AnimeflvProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/AnimeflvProvider.cs3",
+        "name": "AnimeflvProvider"
+    },
+    {
+        "iconUrl": "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://animeytx.net/&size=128",
+        "fileHash": "sha256-6a3f301be8a149c8ba1de606cf53dc730048b5a8e2e9c26c825151a876f57d17",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 28399,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 5,
+        "internalName": "AnimeYTX",
+        "description": "\u00danete a la familia de AnimeYT.es y disfruta del anime online gratis. Disfruta con tus amigos del contenido m\u00e1s popular de la animaci\u00f3n japonesa.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/AnimeYTX.cs3",
+        "name": "AnimeYTX"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww1.henaojara.net/&size=128",
+        "fileHash": "sha256-ede4c056f6c18294974624bcf84380ea5553a19545c2cfac44e7d08ee72ecfd5",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 15312,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 3,
+        "internalName": "Henaojara",
+        "description": "Ver anime online, subtitulado y/o doblado al espa\u00f1ol latino HD y completamente gratis. Aqu\u00ed podr\u00e1s ver y descargar todas tus series preferidas sin anuncios.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Henaojara.cs3",
+        "name": "Henaojara"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=jkanime.net&sz=%size%",
+        "fileHash": "sha256-a57c501d497a3e9e322387b8def16b2bc5562013213b02d9509e3343a0751666",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 35424,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 9,
+        "internalName": "JKAnimeProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/JKAnimeProvider.cs3",
+        "name": "JKAnimeProvider"
+    },
+    {
+        "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://latanime.org/&size=16",
+        "fileHash": "sha256-4f592958fc31efb6b11e06b2029f519de9432c8f90db986bd464f60b8e00af72",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 17592,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 8,
+        "internalName": "Latanime",
+        "description": "odos los anime con Doblaje Latino/Castellano solo aqu\u00ed en Latanime. Animes de estreno, subtitulado al espa\u00f1ol y con Audio Latino o Castellano, Online, HD y gratis. Para descargar por MEGA, Mediafire o Drive sin limites.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Latanime.cs3",
+        "name": "Latanime"
+    },
+    {
+        "iconUrl": "https://latanime.org/public/img/logito.png",
+        "fileHash": "sha256-71f5ae7b8a6b845c99f8e12e2ac5e96cfa66487cc5ae84417f2a09d277c845bf",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 13935,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 3,
+        "internalName": "Latanime_1",
+        "description": "(Mexican) Anime Extension",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Latanime_1.cs3",
+        "name": "Latanime_1"
+    },
+    {
+        "iconUrl": "https://latanime.org/public/img/logito.png",
+        "fileHash": "sha256-56b587b95d3c27049147790d2e432c63460302f854f0bac7ff6b79734e3dffa3",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 14193,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "misajimenezmx"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 5,
+        "internalName": "LatAnimeProvider",
+        "description": "Anime en latino y subtitulado.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/LatAnimeProvider.cs3",
+        "name": "LatAnimeProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=mundodonghua.com&sz=%size%",
+        "fileHash": "sha256-c211d380eecff934676370121e39e2b9b1898a11c2f3fb38e16b8b95b3c9b41d",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 20786,
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 4,
+        "internalName": "MundoDonghuaProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/MundoDonghuaProvider.cs3",
+        "name": "MundoDonghuaProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=tioanime.com&sz=%size%",
+        "fileHash": "sha256-8c06f3f65cb0e85abc0f176f28d4496ca32a95915f2e5bdee36e695054c9efc3",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 19171,
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "version": 4,
+        "internalName": "TioAnimeProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/TioAnimeProvider.cs3",
+        "name": "TioAnimeProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=lacartoons.com&sz=%size%",
+        "fileHash": "sha256-13ff308d76b885446627c5f423c19965bf9acc6933aff07799956bddd6840306",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 15246,
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Cartoons"
+        ],
+        "version": 5,
+        "internalName": "LACartoonsProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/LACartoonsProvider.cs3",
+        "name": "LACartoonsProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=doramasflix.co&sz=%size%",
+        "fileHash": "sha256-50e13a55a7ececf2e2a89d565d2bcb7a0f4575c51c1deba74162b3eac0ca18c5",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 40470,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "AsianDrama"
+        ],
+        "version": 8,
+        "internalName": "DoramasFlixProvider_1",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/DoramasFlixProvider_1.cs3",
+        "name": "DoramasFlixProvider_1"
+    },
+    {
+        "iconUrl": "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://doramaslatinox.com/&size=128",
+        "fileHash": "sha256-dd1cdfb7594ac56abdbf195a6de98f8e9eeceb36c47549e616db0f0cdfed800c",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 23604,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "AsianDrama"
+        ],
+        "version": 6,
+        "internalName": "DoramasLatinoX",
+        "description": "Doramas en Audio Espa\u00f1ol Latino y Subtitulado.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/DoramasLatinoX.cs3",
+        "name": "DoramasLatinoX"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=doramasyt.com&sz=%size%",
+        "fileHash": "sha256-6dd6bea14221c86fc405a86467bd978ebc21c571cd3524c821aacff7cdee07c3",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 20000,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "AsianDrama"
+        ],
+        "version": 7,
+        "internalName": "DoramasYTProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/DoramasYTProvider.cs3",
+        "name": "DoramasYTProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=estrenosdoramas.net&sz=%size%",
+        "fileHash": "sha256-27ffa99dcd3465df654d1450f1bcbf378a7169d06f47000590b74f43be6c5d4a",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 22104,
+        "status": 0,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "AsianDrama"
+        ],
+        "version": 4,
+        "internalName": "EstrenosDoramasProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/EstrenosDoramasProvider.cs3",
+        "name": "EstrenosDoramasProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=onetouchtv.xyz/&sz=%size%",
+        "jarFileSize": 204103,
+        "fileHash": "sha256-7f521f3492b1053fd9715dca4ae7cc603102e280ddb785d7d29600371a6e73e8",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 43225,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "AsianDrama"
+        ],
+        "version": 2,
+        "internalName": "OneTouchTV",
+        "jarUrl": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/OneTouchTV.jar",
+        "description": "Asian Dramas",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/OneTouchTV.cs3",
+        "name": "OneTouchTV",
+        "jarHash": "sha256-a9de1055b7a9ae000f758ff6c749d1d1d30f1c4115dd2572ecba4fb92eb2cd7c"
+    },
+    {
+        "iconUrl": "https://yt3.googleusercontent.com/T_d2j2xZMjAxPCehiFR6hAv7jE3swcUzfgV8wCXzv1IL7rCEDv3cgQtIxjdmLVyP6ZrSgIu0nw=s900-c-k-c0x00ffffff-no-rj",
+        "fileHash": "sha256-8039678002893a7492ee88dd7609c50ffd08f586ae0ee67c9d99777ccb6a58fb",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 85158,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "redblacker8"
+        ],
+        "tvTypes": [
+            "Live"
+        ],
+        "version": 28,
+        "internalName": "DeporTVProvider",
+        "description": "Deportes eventos en vivo. Sports live events. Futbol. Soccer.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/DeporTVProvider.cs3",
+        "name": "DeporTVProvider"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/IPTV.png",
+        "jarFileSize": 78329,
+        "fileHash": "sha256-79f0d94382d9d76b3cc9eb929f769f852c66eabee34c4f5349818944fd01e536",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 19432,
+        "status": 1,
+        "language": "hi",
+        "authors": [
+            "Phisher98,Adippe"
+        ],
+        "tvTypes": [
+            "Live"
+        ],
+        "version": 7,
+        "internalName": "IPTVPlayer",
+        "jarUrl": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/IPTVPlayer.jar",
+        "description": "IPTV Player",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/IPTVPlayer.cs3",
+        "name": "IPTVPlayer",
+        "jarHash": "sha256-3d66a1be553e2cf72d57782c1f326284b88f685b33d2dbadf334f0c7b62827c6"
+    },
+    {
+        "iconUrl": "https://favicons.teamtailor-cdn.com/icon?size=80..120..200&url=tv.garden",
+        "fileHash": "sha256-bab8db9cd9342ee4b0daf612184f6b0249cebac7f9bfaeac3aa3923ce39ec96d",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 15066,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "Live"
+        ],
+        "version": 10,
+        "internalName": "TVGarden",
+        "description": "With TVGarden, you can watch the local and legal channels you are looking for from both domestic and international sources.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/TVGarden.cs3",
+        "name": "TVGarden"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=cinecalidad.lol&sz=%size%",
+        "fileHash": "sha256-9b94803e4098a66f74d50588d1ddea96ffead1e662a932cd3caec5158f49d58e",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 17187,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 7,
+        "internalName": "CinecalidadProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/CinecalidadProvider.cs3",
+        "name": "CinecalidadProvider"
+    },
+    {
+        "iconUrl": "https://cinehdplus.org/wp-content/uploads/2021/11/favicon.png",
+        "fileHash": "sha256-53adee80ef6dc5bff0c17b363c25397b0b1c018d442b4707416a2fed715917ca",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 19732,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "redblacker8"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 3,
+        "internalName": "CineHdPlusProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/CineHdPlusProvider.cs3",
+        "name": "CineHdPlusProvider"
+    },
+    {
+        "iconUrl": "https://i.imgur.com/A87j6ue.png",
+        "fileHash": "sha256-14bcf96b59643571bbab93b0c53bf1aa09505a603fedb76aee1815f27390255c",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 45850,
+        "status": 0,
+        "language": "en",
+        "authors": [
+            "ByAyzen",
+            "kraptor"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 7,
+        "internalName": "CinemaCity",
+        "description": "Cinema City.",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/CinemaCity.cs3",
+        "name": "CinemaCity"
+    },
+    {
+        "fileHash": "sha256-f236bc6aa07278e648609285c7b2c1605f1fb1c553a3e0446962e15e97299864",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 6187,
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "youaregoldenhehe"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 1,
+        "internalName": "Cuevana",
+        "description": "Cuevana Plugin",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Cuevana.cs3",
+        "name": "Cuevana"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=entrepeliculasyseries.nz&sz=%size%",
+        "fileHash": "sha256-e3ac193533da7a003a6b056a9b195570042f391760b3f1d9f211f86386b246c7",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 27838,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 9,
+        "internalName": "EntrepeliculasyseriesProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/EntrepeliculasyseriesProvider.cs3",
+        "name": "EntrepeliculasyseriesProvider"
+    },
+    {
+        "iconUrl": "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww3.gnulahd.nu/&size=128",
+        "fileHash": "sha256-c30fcb670499ee9a47bac6c5692be00fbc9261211fcf66239a614b69a6db4cf2",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 29147,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "ByAyzen"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 6,
+        "internalName": "Gnulahd",
+        "description": "GnulaHD",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Gnulahd.cs3",
+        "name": "Gnulahd"
+    },
+    {
+        "iconUrl": "https://hdfullcdn.cc/favicon.ico",
+        "fileHash": "sha256-dd684f93121b14f97a56e1dff729d47a2c1b732213486854e4841bf7e7480744",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 32819,
+        "status": 1,
+        "language": "es",
+        "authors": [
+            "redblacker8"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 5,
+        "internalName": "HDFullProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/HDFullProvider.cs3",
+        "name": "HDFullProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=pelispedia.is&sz=%size%",
+        "fileHash": "sha256-0e5d821fbbeb0a39289421905417f9e5a7974a59ab9620b7c98be79cd3786756",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 16611,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 7,
+        "internalName": "PelispediaProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/PelispediaProvider.cs3",
+        "name": "PelispediaProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=pelisplus.to&sz=%size%",
+        "fileHash": "sha256-6b4b744c7eb3acf3985e70a53cb7e72ded681dd77bb99912e64f5f1c9fdae041",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 43404,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 12,
+        "internalName": "Pelisplus4KProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Pelisplus4KProvider.cs3",
+        "name": "Pelisplus4KProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=pelisplushd.bz&sz=%size%",
+        "fileHash": "sha256-f3c150da2e6acef8ee6e4703f5731eb5600546e776ed878a154bf2b171b3f9ba",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 56197,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Phisher98"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 2,
+        "internalName": "Pelisplushd",
+        "description": "(Mexican) Movies/Series/Anime Extension",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/Pelisplushd.cs3",
+        "name": "Pelisplushd"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=pelisplushd.nu&sz=%size%",
+        "fileHash": "sha256-dfcadf37da0cf7b34732fe04aab6676874bc0c3ccf1cc36afb503b39fd956f8e",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 27482,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 10,
+        "internalName": "PelisplusHDProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/PelisplusHDProvider.cs3",
+        "name": "PelisplusHDProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=seriesmetro.net&sz=%size%",
+        "fileHash": "sha256-f1bdb9fef9c26a7435207e783f7f25f876bd1a0066d16da45783b853e9e56f94",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 17277,
+        "status": 1,
+        "language": "mx",
+        "authors": [
+            "Stormunblessed"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 4,
+        "internalName": "SeriesMetroProvider",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/SeriesMetroProvider.cs3",
+        "name": "SeriesMetroProvider"
+    },
+    {
+        "iconUrl": "https://github.com/SaurabhKaperwan/CSX/raw/refs/heads/master/CineStream/icon.png",
+        "fileHash": "sha256-7db83d68db2297f51a836d3c1d0ebf0c678614fbf967264a48afeba534d1b2bd",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/ChonDoit/CSAddonTest",
+        "fileSize": 666229,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "megix"
+        ],
+        "tvTypes": [
+            "Torrent"
+        ],
+        "version": 459,
+        "internalName": "CineStream",
+        "description": "One stop solution for Movies, Series, Anime, AsianDrama and Torrents",
+        "url": "https://raw.githubusercontent.com/ChonDoit/CSAddonTest/builds/CineStream.cs3",
+        "name": "CineStream"
+    }
+]
