@@ -70,6 +70,9 @@ jobs:
           find . -name "*.cs3" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No .cs3 files found"
           find . -name "*.jar" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No .jar files found"
           find . -name "plugins.json" -path "*/build/*" -exec cp {} $GITHUB_WORKSPACE/builds/ \; || echo "No plugins.json found"
+          rm $GITHUB_WORKSPACE/builds/R.jar
+          rm $GITHUB_WORKSPACE/builds/classes.jar
+          rm $GITHUB_WORKSPACE/builds/full.jar
 
       - name: Push builds
         run: |
