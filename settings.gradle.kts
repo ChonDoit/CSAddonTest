@@ -14,14 +14,12 @@ categories.forEach { category ->
     
     if (categoryDir.exists() && categoryDir.isDirectory) {
         categoryDir.listFiles()
-            ?.filter { provider -> 
-                provider.isDirectory && 
-                provider.name != category &&
-                File(provider, "build.gradle.kts").exists() 
-            }
+            ?.filter { it.isDirectory && File(it, "build.gradle.kts").exists() }
             ?.forEach { provider ->
+                
                 val projectPath = ":${category}:${provider.name}"
                 include(projectPath)
+                
                 project(projectPath).projectDir = provider
             }
     }
