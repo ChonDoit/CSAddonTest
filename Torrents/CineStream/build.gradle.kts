@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
-version = 394
+version = 396
 
 android {
     namespace = "com.megix"
