@@ -126,15 +126,32 @@ class AnimeAV : MainAPI() {
             ?: 1
         val mediaId = Regex(pattern = "\\{media:\\{id:([0-9]+)", options = setOf(RegexOption.IGNORE_CASE)).find(sveltekitScript)?.groupValues[1]
 
-        val episodes = (1..totalEp).map { episodeNum ->
-            val href = "$requestUrl/$episodeNum"
-            val posterUrl = "https://cdn.animeav1.com/screenshots/$mediaId/$episodeNum.jpg"
+        val episodeElements = document.select("article.group\\/item")
+        val episodes = if (episodeElements.isNotEmpty()) {
+            episodeElements.mapNotNull { element ->
+                val href = fixUrl(element.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
+                val epNumStr = element.selectFirst("span.text-lead")?.text()?.trim() ?: return@mapNotNull null
+                val epNum = epNumStr.toIntOrNull() ?: 0
+                val posterUrl = element.selectFirst("img")?.attr("src")
 
-            newEpisode(href) {
-                this.name = "Episode $episodeNum"
-                this.posterUrl = posterUrl
-                this.episode = episodeNum
-                this.season = 1
+                newEpisode(href) {
+                    this.name = "Episode $epNum"
+                    this.posterUrl = posterUrl
+                    this.episode = epNum
+                    this.season = 1
+                }
+            }
+        } else {
+            (0..totalEp).map { episodeNum ->
+                val href = "$requestUrl/$episodeNum"
+                val posterUrl = "https://cdn.animeav1.com/screenshots/$mediaId/$episodeNum.jpg"
+
+                newEpisode(href) {
+                    this.name = "Episode $episodeNum"
+                    this.posterUrl = posterUrl
+                    this.episode = episodeNum
+                    this.season = 1
+                }
             }
         }
 
@@ -144,7 +161,7 @@ class AnimeAV : MainAPI() {
             this.year = year
             this.tags = tags
             this.score = Score.from10(rating)
-            this.episodes = mutableMapOf(DubStatus.None to episodes)
+            this.episodes = mutableMapOf(DubStatus.Subbed to episodes.distinctBy { it.episode }.sortedBy { it.episode })
             this.duration = duration
             this.recommendations = recommendations
             addActors(actors)
@@ -174,7 +191,6 @@ class AnimeAV : MainAPI() {
         if (embedsData.isEmpty()) return false
 
         listOf("DUB", "SUB").forEach { type ->
-
             val listPattern = Regex("""$type:\[(.*?)\]""")
             val listMatch = listPattern.find(embedsData)?.groupValues?.get(1)
 
@@ -183,43 +199,48 @@ class AnimeAV : MainAPI() {
 
                 itemPattern.findAll(listMatch).forEach { match ->
                     val server = match.groupValues[1]
-                    val url = match.groupValues[2]
-//                    Log.d("kraptor_${this.name}", "Type: $type, Server: $server, URL: $url")
+                    var url = match.groupValues[2]
 
-                    loadCustomExtractor("${this.name} - $server - $type", url, "$mainUrl/", subtitleCallback, callback)
+                    if (url.startsWith("//")) {
+                        url = "https:$url"
+                    }
+
+                    if (url.isNotBlank()) {
+                        loadCustomExtractor("${this.name} - $server - $type", url, "$mainUrl/", subtitleCallback, callback)
+                    }
                 }
             }
         }
 
         return true
     }
-}
 
-suspend fun loadCustomExtractor(
-    name: String? = null,
-    url: String,
-    referer: String? = null,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-    quality: Int? = null,
-) {
-    loadExtractor(url, referer, subtitleCallback) { link ->
-        CoroutineScope(Dispatchers.IO).launch {
-            callback.invoke(
-                newExtractorLink(
-                    name ?: link.source,
-                    name ?: link.name,
-                    link.url,
-                ) {
-                    this.quality = when {
-                        else -> quality ?: link.quality
-                    }
-                    this.type = link.type
-                    this.referer = link.referer
-                    this.headers = link.headers
-                    this.extractorData = link.extractorData
+    suspend fun loadCustomExtractor(
+        name: String? = null,
+        url: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        quality: Int? = null,
+    ) {
+        loadExtractor(url, referer, subtitleCallback) { link ->
+            if (link.url.isNotBlank() && (link.url.startsWith("http") || link.url.startsWith("https"))) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    callback.invoke(
+                        newExtractorLink(
+                            name ?: link.source,
+                            name ?: link.name,
+                            link.url,
+                        ) {
+                            this.quality = quality ?: link.quality
+                            this.type = link.type
+                            this.referer = link.referer
+                            this.headers = link.headers
+                            this.extractorData = link.extractorData
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 }

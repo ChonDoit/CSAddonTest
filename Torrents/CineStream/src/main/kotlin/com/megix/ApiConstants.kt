@@ -12,9 +12,8 @@ const val MostraguardaAPI = "https://mostraguarda.stream"
 const val CC_COOKIE = BuildConfig.CC_COOKIE
 const val CINE_API = BuildConfig.CINE_API
 const val CASTLE_API = BuildConfig.CASTLE_API
-const val animepaheAPI = "https://animepahe.com"
+const val animepaheAPI = "https://animepahe.pw"
 const val allmovielandAPI = "https://allmovieland.you"
-const val torrentioAPI = "https://torrentio.strem.fun/sort=seeders"
 const val anizoneAPI = "https://anizone.to"
 const val AllanimeAPI = "https://api.allanime.day/api"
 const val PrimeSrcApi = "https://primesrc.me"
@@ -22,9 +21,7 @@ const val asiaflixAPI = "https://asiaflix.net"
 const val twoembedAPI = "https://2embed.cc"
 const val sudatchiAPI = "https://sudatchi.com"
 const val animezAPI = "https://animeyy.com"
-const val webStreamrAPI = """https://webstreamr.hayd.uk/{"multi":"on","al":"on","de":"on","es":"on","fr":"on","it":"on","mx":"on","mediaFlowProxyUrl":"","mediaFlowProxyPassword":"","disableExtractor_hubcloud":"on","disableExtractor_hubdrive":"on"}"""
 const val cinemaOSApi = "https://cinemaos.tech"
-const val vidfastProApi = "https://vidfast.pro"
 const val multiEmbededApi = "https://multiembed.mov"
 const val vidSrcApi = "https://api.rgshows.ru"
 const val vidSrcHindiApi = "https://hindi.rgshows.ru"
@@ -35,19 +32,17 @@ const val vidlinkAPI = "https://vidlink.pro"
 const val multiDecryptAPI = "https://enc-dec.app/api"
 const val animetoshoAPI = "https://feed.animetosho.org"
 const val anizipAPI = "https://api.ani.zip"
-const val mappleAPI = "https://mapple.uk"
+// const val mappleAPI = "https://mapple.uk"
 const val vidzeeApi = "https://player.vidzee.wtf"
 const val animeWorldAPI = "https://anime-world-stremio-addon.onrender.com"
 const val kissKhAPI = "https://kisskh.ws"
 const val bollywoodAPI = "https://tga-hd.api.hashhackers.com"
 const val bollywoodBaseAPI = "https://bollywood.eu.org"
-const val YflixAPI = "https://solarmovie.fi"
 const val vidstackAPI = "https://api.smashystream.top/api/v1"
 const val vidstackBaseAPI = "https://smashyplayer.top"
 const val notorrentAPI = "https://addon-osvh.onrender.com"
 const val xpassAPI = "https://play.xpass.top"
 const val cinemacityAPI = "https://cinemacity.cc"
-const val dramafullAPI = "https://dramafull.cc"
 const val akwamAPI = "https://ak.sv"
 const val flixIndiaAPI = "https://m.flixindia.xyz"
 const val levidiaAPI = "https://www.levidia.ch"
@@ -59,7 +54,28 @@ const val autoembedAPI = "https://player.autoembed.app"
 const val watch32API = "https://watch32.sx"
 const val kuudereAPI = "https://kuudere.to"
 const val vidrockAPI = "https://vidrock.net"
+const val animekizzAPI = "https://animekizz.live"
+const val vidfastProApi = "https://vidfast.pro"
+const val pulpAPI = "https://api.pulp.watch/v1"
+const val meteorAPI = "https://meteorfortheweebs.midnightignite.me"
 const val torrentsdbAPI = "https://torrentsdb.com/eyJsaW1pdCI6IjMiLCJkZWJyaWRvcHRpb25zIjpbIm5vZG93bmxvYWRsaW5rcyJdfQ=="
+
+val multipleYflixAPI = listOf(
+    "https://solarmovie.fi",
+    "https://yflix.to",
+    "https://1movies.bz",
+    "https://sflix.fi",
+    "https://movhub.ws",
+    "https://flixtor.mov",
+    "https://lookmovie.fi",
+    "https://bflix.la",
+    "https://myflixer.fi",
+    "https://123moviesfree.bz",
+    "https://hurawatch.la",
+    "https://soap2day.fi",
+    "https://myflixer.bz",
+    "https://watchseries.st"
+)
 
 // ── 2. Dynamic API Config ────────────────────────────────────
 // Loaded once via init() called from CineStream.load()
@@ -101,3 +117,5 @@ val XDmoviesAPI get() = api("xdmovies")
 val animekaiAPI get() = api("animekai")
 val rtallyAPI get() = api("rtally")
 val kaidoAPI get() = api("kaido")
+val dudefilmsAPI get() = api("dudefilms")
+val m4ufreeAPI get() = api("m4ufree")

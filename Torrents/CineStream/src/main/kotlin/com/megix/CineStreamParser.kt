@@ -71,17 +71,30 @@ data class EncDecResponse(
 
 data class EncDecResult(
     @param:JsonProperty("servers") val servers: String?,
-    @param:JsonProperty("stream") val stream: String?
+    @param:JsonProperty("stream") val stream: String?,
+    @param:JsonProperty("token") val token: String?,
 )
 
 // Vidfast
-data class VidfastServer(
+data class VidfastServers(
     @param:JsonProperty("name") val name: String?,
     @param:JsonProperty("description") val description: String?,
     @param:JsonProperty("data") val data: String?
 )
 
 data class VidfastStreamResponse(
+    val status: Long,
+    val result: List<VidfastServers>,
+    val info: String,
+)
+
+data class VidfastServersStreamRoot(
+    val status: Long,
+    val result: VidfastServer,
+    val info: String,
+)
+
+data class VidfastServer(
     @param:JsonProperty("url") val url: String?,
     @param:JsonProperty("tracks") val tracks: List<VidfastTrack>?,
     @param:JsonProperty("4kAvailable") val is4kAvailable: Boolean?
@@ -656,6 +669,7 @@ data class Daum(
     val createdAt: String,
 )
 
+//Malsync
 data class MALSyncSites(
     @param:JsonProperty("AniXL") val AniXL: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
     @param:JsonProperty("Zoro") val zoro: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
@@ -732,8 +746,29 @@ data class PrimeSrcServer(
     @param:JsonProperty("file_name") val fileName: String?
 )
 
+//Pulp
 
+data class PulpResponse(
+    val sources: List<PulpSource>?,
+    val subtitles: List<PulpSubtitle>?
+)
 
+data class PulpSource(
+    val url: String?,
+    val type: String?,
+    val quality: String?,
+    val provider: PulpProvider?,
+    val headers: Map<String, String>?
+)
 
+data class PulpProvider(
+    val id: String?,
+    val name: String?
+)
 
-
+data class PulpSubtitle(
+    val url: String?,
+    val label: String?,
+    val language: String?,
+    val format: String?
+)
