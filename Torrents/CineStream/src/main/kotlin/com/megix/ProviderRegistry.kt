@@ -6,8 +6,6 @@ import com.lagradost.cloudstream3.utils.*
 /** Container for data fetched during MALSync requests */
 data class MalSyncData(
     val title: String?,
-    val zorotitle: String?,
-    val hianimeurl: String?,
     val animepaheUrl: String?,
     val aniId: Int?,
     val episode: Int?,
@@ -64,10 +62,6 @@ object ProviderRegistry {
         ProviderDef(
             key = "p_cine", displayName = "Cine",
             executeStandard = { res, subCb, cb -> invokeStremioStreams("Cine", CINE_API, res.imdbId, res.season, res.episode, subCb, cb) }
-        ),
-        ProviderDef(
-            key = "p_animeworld", displayName = "AnimeWorld",
-            executeAnime = { res, subCb, cb -> invokeStremioStreams("Anime World Multi Audio 🌐", animeWorldAPI, res.imdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) }
         ),
         ProviderDef(
             key = "p_wyziesubs", displayName = "WYZIESubs",
@@ -158,10 +152,10 @@ object ProviderRegistry {
             executeStandard = { res, subCb, cb -> invokePulp(res.tmdbId, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokePulp(res.tmdbId, res.imdbSeason, res.imdbEpisode, subCb, cb) },
         ),
-        // ProviderDef(
-        //     key = "p_mapple", displayName = "Mapple",
-        //     executeStandard = { res, _, cb -> invokeMapple(res.tmdbId, res.season, res.episode, cb) },
-        // ),
+        ProviderDef(
+            key = "p_mapple", displayName = "Mapple",
+            executeStandard = { res, _, cb -> invokeMapple(res.tmdbId, res.season, res.episode, cb) },
+        ),
         ProviderDef(
             key = "p_vidstack", displayName = "Vidstack",
             executeStandard = { res, subCb, cb -> invokeVidstack(res.imdbId, res.season, res.episode, subCb, cb) }
@@ -316,10 +310,6 @@ object ProviderRegistry {
             key = "p_autoembed", displayName = "AutoEmbed",
             executeStandard = { res, subCb, cb -> invokeAutoembed(res.imdbId, res.season, res.episode, subCb, cb) },
         ),
-        ProviderDef(
-            key = "p_watch32", displayName = "Watch32",
-            executeStandard = { res, subCb, cb -> invokeWatch32(res.title, res.season, res.episode, subCb, cb) },
-        ),
         // ProviderDef(
         //     key = "p_multiembeded", displayName = "Multiembeded",
         //     executeStandard = { res, subCb, cb -> invokeMultiEmbeded(res.tmdbId, res.season, res.episode, subCb, cb) },
@@ -331,13 +321,13 @@ object ProviderRegistry {
             executeStandard = { res, subCb, cb -> if (res.isAsian) invokeKisskh(res.title, res.year, res.season, res.episode, subCb, cb) }
         ),
         ProviderDef(
+            key = "p_onetouchtv", displayName = "Onetouchtv",
+            executeStandard = { res, subCb, cb -> invokeOnetouchtv(res.title, res.airedYear, res.season, res.episode, subCb, cb) }
+        ),
+        ProviderDef(
             key = "p_toonstream", displayName = "Toonstream",
             executeStandard = { res, subCb, cb -> if (res.isAnime || res.isCartoon) invokeToonstream(res.title, res.season, res.episode, subCb, cb) },
             executeAnime = { res, subCb, cb -> invokeToonstream(res.imdbTitle, res.imdbSeason, res.imdbEpisode, subCb, cb) }
-        ),
-        ProviderDef(
-            key = "p_kaido", displayName = "Kaido",
-            executeMalSync = { data, subCb, cb -> invokeKaido(data.hianimeurl, data.animepaheTitle ?: data.title, data.episode, subCb, cb) }
         ),
         ProviderDef(
             key = "p_animepahe", displayName = "AnimePahe",
@@ -345,12 +335,7 @@ object ProviderRegistry {
         ),
         ProviderDef(
             key = "p_animekai", displayName = "Animekai",
-            executeMalSync = { data, subCb, cb -> invokeAnimekai(data.zorotitle ?: data.title, data.episode, subCb, cb) }
-        ),
-        ProviderDef(
-            key = "p_animez", displayName = "AnimeZ",
-            executeAnime = { res, _, cb -> invokeAnimez(res.title, res.episode, cb) },
-            executeMalSync = { data, _, cb -> invokeAnimez(data.title ?: data.zorotitle, data.episode, cb) }
+            executeMalSync = { data, subCb, cb -> invokeAnimekai(data.title, data.episode, subCb, cb) }
         ),
         ProviderDef(
             key = "p_allanime", displayName = "AllAnime",
