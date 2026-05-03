@@ -330,6 +330,13 @@ data class NfSearchResult(
     val t: String
 )
 
+data class NfPlaylist(
+    val status: String,
+    val usertoken: String,
+    val video_link: String,
+    val referer: String,
+)
+
 data class NetflixSources(
     @param:JsonProperty("file") val file: String? = null,
     @param:JsonProperty("label") val label: String? = null,
@@ -633,8 +640,7 @@ data class Daum(
 
 //Malsync
 data class MALSyncSites(
-    @param:JsonProperty("AniXL") val AniXL: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
-    @param:JsonProperty("Zoro") val zoro: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
+    @param:JsonProperty("AnimeKAI") val animekai: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
     @param:JsonProperty("animepahe") val animepahe: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
 )
 

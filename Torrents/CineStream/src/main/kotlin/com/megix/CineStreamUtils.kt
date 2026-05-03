@@ -1,8 +1,5 @@
 package com.megix
 
-// Android
-import android.util.Base64
-
 // Cloudstream & NiceHttp
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
@@ -10,13 +7,10 @@ import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.nicehttp.NiceResponse
 
 // Coroutines
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 // Network
 import java.net.*
@@ -35,9 +29,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
-import kotlin.math.pow
-import kotlin.random.Random
 
 // Security & Crypto
 import java.security.MessageDigest
@@ -325,6 +316,20 @@ fun String.getHost(): String {
     return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
 }
 
+fun String.queryParams(): Map<String, String> {
+    return split("&").mapNotNull {
+        val parts = it.split("=", limit = 2)
+        if (parts.size == 2) parts[0] to java.net.URLDecoder.decode(parts[1], "UTF-8")
+        else null
+    }.toMap()
+}
+
+fun JSONObject?.toStringMap(): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    this?.keys()?.forEach { k -> map[k] = this.optString(k) }
+    return map
+}
+
 suspend fun checkPosterAvailable(posterUrl: String? = null): String? {
     if(posterUrl == null) return null
     return try {
@@ -389,87 +394,6 @@ suspend fun getTvdbData(tvType: String, imdbId: String? = null): ExtractedMediaD
     } else null
 
     return ExtractedMediaData(castList, posterUrl, backgroundUrl, logoUrl)
-}
-
-suspend fun NFBypass(mainUrl: String): String {
-
-    // Check persistent storage first
-    val (savedCookie, savedTimestamp) = Settings.getCookie()
-
-    // Return cached cookie if valid (≤15 hours old)
-    if (!savedCookie.isNullOrEmpty() && System.currentTimeMillis() - savedTimestamp < 54_000_000) {
-        Log.d("NF", "savedCookie: $savedCookie")
-        return savedCookie
-    }
-
-    val addhash = app.get(
-        "$mainUrl/mobile/home?app=1",
-        headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Linux; Android 12; RMX2117 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/147.0.7727.55 Mobile Safari/537.36 /OS.Gatu v3.0",
-            "X-Requested-With" to "app.netmirror.netmirrornew"
-        )
-    ).document.select("body").attr("data-addhash")
-
-    Log.d("NF", "addhash: $addhash")
-
-    app.get("https://userver.net52.cc/?jjoii=$addhash&a=y&t=${APIHolder.unixTime}")
-
-    val newCookie = try {
-        var verifyCheck: String
-        var verifyResponse: NiceResponse
-        var count = 0
-        val requestBody = FormBody.Builder()
-            .addEncoded("verify", "$addhash")
-            .build()
-        do {
-            delay(10000)
-            verifyResponse = app.post(
-                "$mainUrl/mobile/verify2.php",
-                headers = mapOf(
-                    "User-Agent" to "Mozilla/5.0 (Linux; Android 12; RMX2117 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/147.0.7727.55 Mobile Safari/537.36 /OS.Gatu v3.0",
-                    "X-Requested-With" to "XMLHttpRequest"
-                ),
-                requestBody = requestBody
-            )
-            verifyCheck = verifyResponse.text
-
-            Log.d("NF", "verifyCheck: $verifyCheck")
-
-            count++
-            if (count > 7) {
-                throw Exception("Failed to verify cookie")
-            }
-        } while (!verifyCheck.contains("\"statusup\":\"All Done\""))
-        verifyResponse.cookies["t_hash_t"].orEmpty()
-    } catch (e: Exception) {
-        // Clear invalid cookie on failure
-        Settings.clearCookie()
-        throw e
-    }
-
-    // Persist the new cookie
-    if (newCookie.isNotEmpty()) {
-        Settings.saveCookie(newCookie)
-    }
-
-    Log.d("NF", "newCookie: $newCookie")
-    return newCookie
-}
-
-suspend fun getNfVideoToken(mainUrl: String, newUrl: String, id: String, cookies: Map<String, String>): String {
-    val headers = mapOf(
-        "X-Requested-With" to "XMLHttpRequest",
-        "Referer" to "$mainUrl/",
-    )
-
-    val json = app.post(
-        "$mainUrl/play.php",
-        headers = headers,
-        cookies = cookies + mapOf ("user_token" to "233123f803cf02184bf6c67e149cdd50"),
-        data = mapOf("id" to id)
-    ).text
-    val h = JSONObject(json).getString("h").substringAfter("in=")
-    return h
 }
 
 fun buildMagnetString(stream: TorrentioStream): String {
@@ -689,49 +613,50 @@ fun String.encodeUrl(): String {
     return uri.toURL().toString()
 }
 
+//Hindmoviez
+
+val HindmoviezSECRET = base64Decode("NWU5NjA4NWM1NmUwZjU0ZWRhNjU3NzkwYWM1OGQxOWIyNzE0NzljNTA0MzY3ZmM5ZTZhNmMzM2YxZjgyNGU2Yg==")
+
+fun hindmoviezbase64Url(input: String): String {
+    return base64Encode(input.toByteArray())
+        .replace("+", "-")
+        .replace("/", "_")
+        .replace("=", "")
+}
+
+fun hindmoviezhmacSha256(key: String, data: String): String {
+    val mac = Mac.getInstance("HmacSHA256")
+    val secretKey = SecretKeySpec(key.toByteArray(), "HmacSHA256")
+    mac.init(secretKey)
+    return mac.doFinal(data.toByteArray())
+        .joinToString("") { "%02x".format(it) }
+        .substring(0, 16)
+}
+
+fun hindmoviezsignHShare(rawId: String, domain: String): String {
+    val t = System.currentTimeMillis() / 1000
+    val encoded = hindmoviezbase64Url(rawId)
+    val s = hindmoviezhmacSha256(HindmoviezSECRET, "$encoded|$t")
+    return "$domain/r.php?d=${URLEncoder.encode(encoded, "UTF-8")}&t=$t&s=$s"
+}
+
 suspend fun getHindMoviezLinks(
     source: String,
     url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ) {
     val response = app.get(url)
     val doc = response.document
-    val name = doc.select("div.container p:contains(Name:)").text().substringAfter("Name: ")
-    val fileSize = doc.select("div.container p:contains(Size:)").text().substringAfter("Size: ")
-    val simplifiedTitle = getSimplifiedTitle(name + fileSize)
+    // val name = doc.select("div.container p:contains(Name:)").text().substringAfter("Name: ")
+    // val fileSize = doc.select("div.container p:contains(Size:)").text().substringAfter("Size: ")
+    // val simplifiedTitle = getSimplifiedTitle(name + fileSize)
+    val link = doc.select("a.btn-danger").attr("href")
 
-    runLimitedAsync( concurrency = 2,
-        {
-            val link = doc.select("a.btn-info").attr("href")
-            val referer = response.url
-            val document = app.get(link, referer = referer).document
-            document.select("a.button").map {
-                callback.invoke(
-                    newExtractorLink(
-                        source,
-                        source.toSansSerifBold() +" $simplifiedTitle",
-                        it.attr("href"),
-                        ExtractorLinkType.VIDEO,
-                    ) {
-                        this.quality = getIndexQuality(name)
-                    }
-                )
-            }
-        },
-        {
-            val link = doc.select("a.btn-dark").attr("href")
-            callback.invoke(
-                newExtractorLink(
-                    "$source[HCloud]",
-                    "$source[HCloud]".toSansSerifBold() + " $simplifiedTitle",
-                    link,
-                    ExtractorLinkType.VIDEO,
-                ) {
-                    this.quality = getIndexQuality(name)
-                }
-            )
-        },
-    )
+    Log.d("HindMoviez", "link: $link")
+
+    loadSourceNameExtractor(source, link, "", subtitleCallback, callback)
+
 }
 
 //For Extractor new domain
@@ -917,175 +842,6 @@ suspend fun bypassHrefli(url: String): String? {
         .substringBefore("\")")
     if (path == "/404") return null
     return fixUrl(path, getBaseUrl(driveUrl))
-}
-
-//XDM
-
-fun createMouseData(durationMs: Long, phase: Int = 1): Map<String, Any> {
-    val duration = maxOf(1000L, durationMs)
-    val steps = maxOf(6L, duration / 1000L).toInt()
-    return mapOf(
-        "eventCount" to (12 + (steps * 2) + phase),
-        "moveCount" to (8 + steps + phase),
-        "clickCount" to minOf(3, phase + 1),
-        "totalDistance" to (180 + (steps * 90)),
-        "hasMovement" to true,
-        "duration" to duration
-    )
-}
-
-fun generateRandomFingerprint(): String {
-    return UUID.randomUUID().toString().replace("-", "")
-}
-
-suspend fun openAndTrackProtectorSocket(
-    socketUrl: String, baseUrl: String, cookies: Map<String, String>, bindToken: String, durationMs: Long
-): Unit = suspendCancellableCoroutine { cont ->
-    val cookieHeader = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
-    val request = Request.Builder()
-        .url(socketUrl)
-        .header("User-Agent", USER_AGENT)
-        .header("Cookie", cookieHeader)
-        .header("Origin", baseUrl)
-        .build()
-
-    val scope = CoroutineScope(Dispatchers.IO)
-    var startedAt = 0L
-    var intervalJob: Job? = null
-    var timeoutJob: Job? = null
-    var finished = false
-
-    val finish = { error: Exception? ->
-        if (!finished) {
-            finished = true
-            intervalJob?.cancel()
-            timeoutJob?.cancel()
-            if (error != null && cont.isActive) cont.resumeWithException(error)
-            else if (cont.isActive) cont.resume(Unit)
-        }
-    }
-
-    timeoutJob = scope.launch {
-        delay(maxOf(30_000L, durationMs + 10_000L))
-        finish(Exception("WebSocket timeout"))
-    }
-
-    val listener = object : WebSocketListener() {
-        override fun onMessage(webSocket: WebSocket, text: String) {
-            when {
-                text.startsWith("0") -> webSocket.send("40")
-                text == "2" -> webSocket.send("3")
-                text.startsWith("40") && startedAt == 0L -> {
-                    startedAt = System.currentTimeMillis()
-                    webSocket.send("""42["bind","$bindToken"]""")
-                    webSocket.send("""42["visibility","visible"]""")
-
-                    intervalJob = scope.launch {
-                        while (isActive) {
-                            delay(1000)
-                            val elapsed = maxOf(1000L, System.currentTimeMillis() - startedAt)
-                            webSocket.send("""42["heartbeat"]""")
-                            webSocket.send("""42["visibility","visible"]""")
-                            webSocket.send("""42["mouseActivity",${JSONObject(createMouseData(elapsed, 2))}]""")
-                        }
-                    }
-
-                    scope.launch {
-                        delay(durationMs)
-                        finish(null)
-                        webSocket.close(1000, "Done")
-                    }
-                }
-            }
-        }
-        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = finish(Exception(t))
-        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = finish(null)
-    }
-
-    val webSocket = OkHttpClient().newWebSocket(request, listener)
-
-    cont.invokeOnCancellation {
-        finished = true
-        intervalJob?.cancel()
-        timeoutJob.cancel()
-        webSocket.cancel()
-    }
-}
-
-suspend fun bypassXDM(url: String): String? {
-
-    val link = app.get(url, allowRedirects = false).headers["location"] ?: return null
-
-    if (link.contains("hubcloud")) return link
-
-    val fingerprint = generateRandomFingerprint()
-    val visibleMs = 15_000L
-
-    val uri = URI(link)
-    val baseUrl = "${uri.scheme}://${uri.host}"
-    val socketUrl = "${if (uri.scheme == "https") "wss" else "ws"}://${uri.host}/socket.io/?EIO=4&transport=websocket"
-
-    val id = link.substringAfter("/r/").substringBefore("?").substringBefore("/")
-
-    if (id.isEmpty() || id == link) return null
-
-    var sessionCookies = mapOf<String, String>()
-
-    return try {
-        val sessionResponse = app.post(
-            "$baseUrl/api/session",
-            headers = mapOf("User-Agent" to USER_AGENT, "Referer" to link, "Origin" to baseUrl),
-            json = mapOf("code" to id, "fingerprint" to fingerprint, "mouseData" to createMouseData(2500, 1))
-        )
-        sessionCookies = sessionCookies + sessionResponse.cookies
-
-        val sessionData = JSONObject(sessionResponse.text)
-        val sessionId = sessionData.optString("sessionId").ifEmpty { return null }
-        val sessionToken = sessionData.optString("token").ifEmpty { return null }
-
-        openAndTrackProtectorSocket(socketUrl, baseUrl, sessionCookies, sessionToken, visibleMs)
-
-        val step2Url = "$baseUrl/r/${URLEncoder.encode(id, "UTF-8")}?step=2&sid=${URLEncoder.encode(sessionId, "UTF-8")}"
-        val step2Response = app.get(step2Url, headers = mapOf("User-Agent" to USER_AGENT, "Referer" to link), cookies = sessionCookies)
-        sessionCookies = sessionCookies + step2Response.cookies
-
-        val rebindResponse = app.post(
-            "$baseUrl/api/session/rebind",
-            headers = mapOf("User-Agent" to USER_AGENT, "Referer" to step2Url, "Origin" to baseUrl),
-            cookies = sessionCookies,
-            json = mapOf("fingerprint" to fingerprint)
-        )
-        sessionCookies = sessionCookies + rebindResponse.cookies
-        val rebindToken = JSONObject(rebindResponse.text).optString("token").ifEmpty { return null }
-
-        openAndTrackProtectorSocket(socketUrl, baseUrl, sessionCookies, rebindToken, visibleMs)
-
-        val completeResponse = app.post(
-            "$baseUrl/api/session/complete",
-            headers = mapOf("User-Agent" to USER_AGENT, "Referer" to step2Url, "Origin" to baseUrl),
-            cookies = sessionCookies,
-            json = mapOf(
-                "fingerprint" to fingerprint,
-                "mouseData" to createMouseData((visibleMs * 2) + 2500, 3),
-                "honeypot" to ""
-            )
-        )
-        sessionCookies = sessionCookies + completeResponse.cookies
-        val completeToken = JSONObject(completeResponse.text).optString("token").ifEmpty { return null }
-
-        val goUrl = "$baseUrl/go/${URLEncoder.encode(sessionId, "UTF-8")}?t=${URLEncoder.encode(completeToken, "UTF-8")}"
-        val goResponse = app.get(
-            goUrl,
-            headers = mapOf("User-Agent" to USER_AGENT, "Referer" to step2Url),
-            cookies = sessionCookies,
-            allowRedirects = false
-        )
-
-        goResponse.headers["location"] ?: goResponse.headers["Location"]
-    } catch (e: Exception) {
-        println("Failed to bypass XDM: ${e.message}")
-        null
-    }
 }
 
 suspend fun getAniListInfo(animeId: Int): AnimeInfo? {
@@ -1311,118 +1067,6 @@ suspend fun generateMagnetLink(url: String, hash: String?): String {
     }
 }
 
-suspend fun getProtonEmbed(
-    text: String,
-    protonmoviesAPI: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val regex = """([^\"]*strm\.json)""".toRegex()
-    val match = regex.find(text)
-
-    if (match != null) {
-        val url = match.groupValues[1]
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-            "Referer" to protonmoviesAPI
-        )
-        val json = app.get(protonmoviesAPI + url, headers = headers).text
-
-        JSONObject(json).getJSONObject("ppd").optJSONObject("mixdrop.ag")?.optString("link")?.takeIf { it.isNotEmpty() }?.let {
-            val source = it.replace("mxdrop.to", "mixdrop.ps")
-            loadSourceNameExtractor("Protonmovies", source, "", subtitleCallback, callback)
-        }
-    }
-}
-
-suspend fun getProtonStream(
-    doc: Document,
-    protonmoviesAPI: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    doc.select("tr.infotr").safeAmap { tr ->
-        val id = tr.select("button:contains(Info)").attr("id").split("-").getOrNull(1)
-        if(id != null) {
-            val uid = "uid_${System.currentTimeMillis()}_${
-                (Random.nextDouble() * 36.0.pow(9))
-                .toLong()
-                .toString(36)
-                .padStart(9, '0')
-            }"
-
-            val postHeaders = mapOf(
-                "User-Agent" to USER_AGENT,
-                "Referer" to protonmoviesAPI,
-                "Content-Type" to "multipart/form-data",
-            )
-
-            val idData = app.post(
-                "$protonmoviesAPI/ppd.php",
-                headers = postHeaders,
-                data = mapOf(
-                    "downloadid" to id,
-                    "token" to "ok",
-                    "uid" to uid
-                )
-            ).text
-
-            val headers = mapOf(
-                "User-Agent" to USER_AGENT,
-                "Referer" to protonmoviesAPI
-            )
-
-            val idRes = app.post(
-                "$protonmoviesAPI/tmp/$idData",
-                headers = headers
-            ).text
-
-            val ppd = JSONObject(idRes).getJSONObject("ppd")
-
-            ppd.optJSONObject("gofile.io")?.optString("link")?.takeIf { it.isNotEmpty() }?.let {
-                val source = it.replace("\\/", "/")
-                loadSourceNameExtractor("Protonmovies", source, "", subtitleCallback, callback)
-            }
-        }
-    }
-}
-
-fun decodeHtml(encodedArray: Array<String>): String {
-    val joined = encodedArray.joinToString("")
-
-    val unescaped = joined
-        .replace("\\\"", "\"")
-        .replace("\\'", "'")
-
-    val cleaned = unescaped
-        .replace("\\n", "\n")
-        .replace("\\t", "\t")
-        .replace("\\r", "\r")
-
-    val decoded = cleaned
-        .replace("&quot;", "\"")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
-
-    return decoded
-}
-
-fun decodeMeta(document: Document): Document? {
-    val scriptContent = document.selectFirst("script:containsData(decodeURIComponent)")?.data().toString()
-    val splitByEqual = scriptContent.split(" = ")
-    if (splitByEqual.size > 1) {
-        val partAfterEqual = splitByEqual[1]
-        val trimmed = partAfterEqual.split("protomovies")[0].trim()
-        val sliced = if (trimmed.isNotEmpty()) trimmed.dropLast(1) else ""
-        val jsonArray = JSONArray(sliced)
-        val htmlString = decodeHtml(Array(jsonArray.length()) { i -> jsonArray.getString(i) })
-        val decodedDoc = Jsoup.parse(htmlString)
-        return decodedDoc
-    }
-    return null
-}
-
 //Allanime
 fun decrypthex(inputStr: String): String {
     val hexString = if (inputStr.startsWith("-")) {
@@ -1566,11 +1210,11 @@ suspend fun getGojoStreams(
 
 suspend fun getRedirectLinks(url: String): String {
     fun encode(value: String): String {
-        return Base64.encodeToString(value.toByteArray(), Base64.NO_WRAP)
+        return base64Encode(value.toByteArray())
     }
 
     fun decode(value: String): String {
-        return String(Base64.decode(value, Base64.DEFAULT))
+        return base64Decode(value)
     }
 
     fun rot13(value: String): String {
@@ -1615,124 +1259,19 @@ suspend fun getRedirectLinks(url: String): String {
     }
 }
 
-fun cinemaOSGenerateHash(tmdbId: Int?, imdbId: String?, season: Int?, episode: Int?): String {
-    val primary = "a7f3b9c2e8d4f1a6b5c9e2d7f4a8b3c6e1d9f7a4b2c8e5d3f9a6b4c1e7d2f8a5"
-    val secondary = "d3f8a5b2c9e6d1f7a4b8c5e2d9f3a6b1c7e4d8f2a9b5c3e7d4f1a8b6c2e9d5f3"
-
-    var message = "tmdbId:$tmdbId|imdbId:$imdbId"
-
-    if (season != null && episode != null) {
-        message += "|seasonId:$season|episodeId:$episode"
-    }
-    val firstHash = calculateHmacSha256(message, primary)
-    return calculateHmacSha256(firstHash, secondary)
-}
-
-private fun calculateHmacSha256(data: String, key: String): String {
-    val algorithm = "HmacSHA256"
-    val secretKeySpec = SecretKeySpec(key.toByteArray(Charsets.UTF_8), algorithm)
-    val mac = Mac.getInstance(algorithm)
-    mac.init(secretKeySpec)
-
-    val bytes = mac.doFinal(data.toByteArray(Charsets.UTF_8))
-    return bytes.joinToString("") { "%02x".format(it) }
-}
-
-fun cinemaOSDecryptResponse(e: CinemaOSReponseData?): String? {
-    if (e == null) return null
-
-    if (e.encrypted.isEmpty() || e.cin.isEmpty() || e.mao.isEmpty() || e.salt.isEmpty()) {
-        return null
-    }
-
-    val passwordStr = "a1b2c3d4e4f6477658455678901477567890abcdef1234567890abcdef123456"
-
-    val ivBytes = hexStringToByteArray(e.cin)
-    val authTagBytes = hexStringToByteArray(e.mao)
-    val encryptedBytes = hexStringToByteArray(e.encrypted)
-    val saltBytes = hexStringToByteArray(e.salt)
-
-    val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-    val spec = PBEKeySpec(passwordStr.toCharArray(), saltBytes, 100000, 256)
-    val tmp = factory.generateSecret(spec)
-    val key = SecretKeySpec(tmp.encoded, "AES")
-
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-    val gcmSpec = GCMParameterSpec(128, ivBytes)
-    cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec)
-
-    val decryptedBytes = cipher.doFinal(encryptedBytes + authTagBytes)
-    return String(decryptedBytes, Charsets.UTF_8)
-}
-
-fun hexStringToByteArray(hex: String): ByteArray {
-    require(hex.length % 2 == 0) { "Hex string must have even length" }
-    return hex.chunked(2)
-        .map { it.toInt(16).toByte() }
-        .toByteArray()
-}
-
-fun parseCinemaOSSources(jsonString: String): List<Map<String, String>> {
-    val json = JSONObject(jsonString)
-    val sourcesObject = json.getJSONObject("sources")
-    val sourcesList = mutableListOf<Map<String, String>>()
-
-    val keys = sourcesObject.keys()
-    while (keys.hasNext()) {
-        val key = keys.next()
-        val source = sourcesObject.getJSONObject(key)
-
-        if (source.has("qualities")) {
-            val qualities = source.getJSONObject("qualities")
-            val qualityKeys = qualities.keys()
-
-            while (qualityKeys.hasNext()) {
-                val qualityKey = qualityKeys.next()
-                val qualityObj = qualities.getJSONObject(qualityKey)
-
-                val sourceMap = mutableMapOf<String, String>()
-                sourceMap["server"] = source.optString("server", key)
-                sourceMap["url"] = qualityObj.optString("url", "")
-                sourceMap["type"] = qualityObj.optString("type", "")
-                sourceMap["speed"] = source.optString("speed", "")
-                sourceMap["bitrate"] = source.optString("bitrate", "")
-                sourceMap["quality"] = qualityKey
-
-                sourcesList.add(sourceMap)
-            }
-        } else {
-            val sourceMap = mutableMapOf<String, String>()
-            sourceMap["server"] = source.optString("server", key)
-            sourceMap["url"] = source.optString("url", "")
-            sourceMap["type"] = source.optString("type", "")
-            sourceMap["speed"] = source.optString("speed", "")
-            sourceMap["bitrate"] = source.optString("bitrate", "")
-            sourceMap["quality"] = source.optString("quality", "")
-
-            sourcesList.add(sourceMap)
-        }
-    }
-
-    return sourcesList
-}
-
 fun decryptVidzeeUrl(encryptedUrl: String, secret: String): String? {
     return try {
-        val decodedBytes = Base64.decode(encryptedUrl, Base64.DEFAULT)
-        val decodedString = String(decodedBytes, Charsets.UTF_8)
+        val decodedString = base64Decode(encryptedUrl)
         val parts = decodedString.split(":", limit = 2)
         if (parts.size < 2) return null
-        val ivB64 = parts[0]
-        val ciphertextB64 = parts[1]
-        val iv = Base64.decode(ivB64, Base64.DEFAULT)
-        val ciphertext = Base64.decode(ciphertextB64, Base64.DEFAULT)
+
+        val iv         = base64DecodeArray(parts[0])
+        val ciphertext = base64DecodeArray(parts[1])
+
         val key = secret.padEnd(32, '\u0000').toByteArray(Charsets.UTF_8)
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        val secretKeySpec = SecretKeySpec(key, "AES")
-        val ivParameterSpec = IvParameterSpec(iv)
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
-        val decryptedData = cipher.doFinal(ciphertext)
-        String(decryptedData, Charsets.UTF_8)
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
+        String(cipher.doFinal(ciphertext), Charsets.UTF_8)
     } catch (e: Exception) {
         null
     }
@@ -1787,14 +1326,11 @@ fun getVidrockUrlEncode(itemId: String): String {
     val passphrase = "x7k9mPqT2rWvY8zA5bC3nF6hJ2lK4mN9"
     val keyBytes = passphrase.toByteArray(Charsets.UTF_8)
     val ivBytes = keyBytes.copyOfRange(0, 16)
-    val secretKey = SecretKeySpec(keyBytes, "AES")
-    val ivSpec = IvParameterSpec(ivBytes)
     val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-    cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec)
+    cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(keyBytes, "AES"), IvParameterSpec(ivBytes))
     val encryptedBytes = cipher.doFinal(itemId.toByteArray(Charsets.UTF_8))
-    val base64Encoded = android.util.Base64.encodeToString(encryptedBytes, android.util.Base64.NO_WRAP)
-    val urlEncoded = URLEncoder.encode(base64Encoded, "UTF-8").replace("%2F", "/")
-    return urlEncoded
+    val base64Encoded = base64Encode(encryptedBytes)
+    return URLEncoder.encode(base64Encoded, "UTF-8").replace("%2F", "/")
 }
 
 //Xpass
@@ -1830,4 +1366,37 @@ fun solvePowChallenge(challenge: String, difficulty: Int): String? {
         md.reset()
         if (nonce > 10_000_000) return null
     }
+}
+
+//Peachify
+fun peachifyDecrypt(encrypt: String): String? {
+    return try {
+        val parts = encrypt.split(".")
+        if (parts.size < 3) return null
+
+        val iv         = b64UrlDecode(parts[0])
+        val cipherData = b64UrlDecode(parts[1]) + b64UrlDecode(parts[2])
+
+        val keyBytes = "d8f2a1b5e9c470814f6b2c3a5d8e7f901a2b3c4d5e3f7a8b9c0d1e2f3a4b5c6d"
+            .chunked(2)
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            SecretKeySpec(keyBytes, "AES"),
+            GCMParameterSpec(128, iv)
+        )
+        String(cipher.doFinal(cipherData), Charsets.UTF_8)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+fun b64UrlDecode(s: String): ByteArray {
+    return s.replace('-', '+').replace('_', '/')
+        .let { it + "=".repeat((4 - it.length % 4) % 4) }
+        .let { base64DecodeArray(it) }
 }
