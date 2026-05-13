@@ -7,6 +7,10 @@ import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 
 // Network (OkHttp & Java Net)
 import java.net.URI
@@ -29,117 +33,6 @@ import java.security.SecureRandom
 import javax.crypto.Cipher
 
 import com.megix.settings.Settings
-
-open class ZenCloudz : ExtractorApi() {
-    override val name = "ZenCloudz"
-    override val mainUrl = "https://zencloudz.cc"
-    override val requiresReferer = true
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val headers = mapOf(
-            "Referer" to "$mainUrl/",
-            "User-Agent" to USER_AGENT
-        )
-
-        val response = app.get(url, headers = headers).text
-
-        val regex = Regex("""data:\s*\[null,null,(\{.*?\})\],\s*form:\s*null""")
-        val matchResult = regex.find(response) ?: return
-        val jsonString = matchResult.groupValues[1]
-
-        val siteData = JSONObject(jsonString).getJSONObject("data")
-        val obfuscatedCryptoData = siteData.getJSONObject("obfuscated_crypto_data")
-        val obfuscationSeed = siteData.getString("obfuscation_seed")
-
-        val primaryHash = sha256(obfuscationSeed)
-        val secondaryHash = sha256(primaryHash)
-
-        val containerField = "cd_${primaryHash.substring(24, 32)}"
-        val arrayField = "ad_${primaryHash.substring(32, 40)}"
-        val objectField = "od_${primaryHash.substring(40, 48)}"
-        val keyField = "kf_${primaryHash.substring(8, 16)}"
-        val ivField = "ivf_${primaryHash.substring(16, 24)}"
-        val tokenField = "${primaryHash.substring(48, 64)}_${primaryHash.substring(56, 64)}"
-        val secondaryKeyField = "${secondaryHash.substring(0, 16)}_${secondaryHash.substring(16, 24)}"
-
-        val containerData = obfuscatedCryptoData.getJSONObject(containerField)
-        val arrayData = containerData.getJSONArray(arrayField)
-        val objectData = arrayData.getJSONObject(0).getJSONObject(objectField)
-
-        val encryptedKeyB64 = objectData.getString(keyField)
-        val ivB64 = objectData.getString(ivField)
-        val secondaryKeyB64 = siteData.getString(secondaryKeyField)
-        val tokenReference = siteData.getString(tokenField)
-
-        val tokenResponseStr = app.get("$mainUrl/api/m3u8/$tokenReference", headers = headers).text
-        val tokenJson = JSONObject(tokenResponseStr)
-
-        val encryptedVideoB64 = tokenJson.getString("video_b64")
-        val dynamicKeyB64 = tokenJson.getString("key_frag")
-
-        val encryptedKeyBytes = base64DecodeArray(encryptedKeyB64)
-        val secondaryKeyBytes = base64DecodeArray(secondaryKeyB64)
-        val dynamicKeyBytes   = base64DecodeArray(dynamicKeyB64)
-        val ivBytes           = base64DecodeArray(ivB64)
-        val ciphertextBytes   = base64DecodeArray(encryptedVideoB64)
-
-        val sboxSeed = obfuscationSeed.substring(0, 8).toLong(16).toInt()
-        val sboxTable = generateSbox(sboxSeed)
-        val aesKey = deriveAesKey(encryptedKeyBytes, secondaryKeyBytes, dynamicKeyBytes, sboxTable)
-
-        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        val secretKeySpec = SecretKeySpec(aesKey, "AES")
-        val ivParameterSpec = IvParameterSpec(ivBytes)
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
-
-        val plaintextBytes = cipher.doFinal(ciphertextBytes)
-        val videoUrl = String(plaintextBytes, Charsets.UTF_8)
-
-        Log.d("ZenCloudz", "Decrypted URL: $videoUrl")
-
-        callback.invoke(
-            newExtractorLink(
-                name,
-                name,
-                videoUrl,
-                type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else INFER_TYPE
-            ) {
-                this.referer = "$mainUrl/"
-                this.quality = 1080
-            }
-        )
-    }
-
-    private fun sha256(input: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    private fun generateSbox(seed: Int): ByteArray {
-        val sbox = ByteArray(256)
-        for (i in 0 until 256) {
-            sbox[i] = ((i * 37 + seed) and 0xFF).toByte()
-        }
-        return sbox
-    }
-
-    private fun deriveAesKey(keyFragment: ByteArray, secondaryKey: ByteArray, dynamicKey: ByteArray, sbox: ByteArray): ByteArray {
-        val length = keyFragment.size
-        val aesKey = ByteArray(length)
-        for (i in 0 until length) {
-            aesKey[i] = (keyFragment[i].toInt() xor
-                         secondaryKey[i].toInt() xor
-                         dynamicKey[i].toInt() xor
-                         sbox[i and 0xFF].toInt()).toByte()
-        }
-        return aesKey
-    }
-}
 
 class Streameeeeee : Videostr() {
     override var name = "Streameeeeee"
@@ -744,6 +637,11 @@ open class HubCloud : ExtractorApi() {
     override val mainUrl: String = "https://hubcloud.*"
     override val requiresReferer = false
 
+    fun extractPxlUrl(html: String): String? {
+        val regex = Regex("""var\s+pxl\s*=\s*["']([^"']+)["']""")
+        return regex.find(html)?.groupValues?.get(1)
+    }
+
     override suspend fun getUrl(
         url: String,
         referer: String?,
@@ -804,9 +702,10 @@ open class HubCloud : ExtractorApi() {
             else if (text.contains("Mega Server")) myCallback(link, "[Mega Server]")
             else if (text.contains("Download File")) myCallback(link)
             else if (link.contains("pixeldra")) {
-                val baseUrlLink = getBaseUrl(link)
-                val finalURL = if (link.contains("download", true)) link
-                else "$baseUrlLink/api/file/${link.substringAfterLast("/")}?download"
+                val pixelLink = extractPxlUrl(document.toString()) ?: return@safeAmap
+                val baseUrlLink = getBaseUrl(pixelLink)
+                val finalURL = if (pixelLink.contains("download", true)) pixelLink
+                else "$baseUrlLink/api/file/${pixelLink.substringAfterLast("/")}?download"
                 myCallback(finalURL, "[Pixeldrain]")
             }
             else if (Settings.allowDownloadLinks && text.contains("Server : 10Gbps")) {
@@ -1047,6 +946,137 @@ class Cloudnestra : ExtractorApi() {
     }
 }
 
+class FlixCloud : ExtractorApi() {
+    override val name = "FlixCloud"
+    override val mainUrl = "https://flixcloud.cc"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val headers = mapOf("Referer" to "$mainUrl/")
+        val res = app.get(url, headers = headers).document
+
+        val script = res.selectFirst("script:containsData(video_id)")
+            ?.data()
+            ?: return
+
+        val start = script.indexOf("data:{")
+        if (start == -1) return
+
+        val from = script.indexOf('{', start)
+
+        var depth = 0
+        var end = -1
+
+        for (i in from until script.length) {
+            when (script[i]) {
+                '{' -> depth++
+                '}' -> {
+                    depth--
+                    if (depth == 0) {
+                        end = i
+                        break
+                    }
+                }
+            }
+        }
+
+        if (end == -1) return
+
+        val rawData = script.substring(from, end + 1).toJson()
+        val data = JSONObject(
+            rawData.replace(
+                Regex("""([{,]\s*)([A-Za-z0-9_]+)(\s*:)"""),
+                "$1\"$2\"$3"
+            )
+        )
+
+        data.optJSONArray("subtitles")?.let { subtitles ->
+            for (i in 0 until subtitles.length()) {
+                subtitles.optJSONObject(i)?.run {
+                    subtitleCallback.invoke(
+                        newSubtitleFile(
+                            getLanguage(optString("language")) ?: optString("language"),
+                            optString("url")
+                        )
+                    )
+                }
+            }
+        }
+
+        data.remove("subtitles")
+
+        val resolvedRes = app.post(
+            "$multiDecryptAPI/dec-reanime?type=resolve",
+            requestBody = JSONObject().put("data", data)
+                .toString()
+                .toRequestBody("application/json".toMediaType()),
+            timeout = 10000L
+        )
+
+        val resolvedJson = JSONObject(resolvedRes.text)
+
+        val resolved = resolvedRes
+            .parsedSafe<ResolvedReAnime>()
+            ?.result ?: return
+
+        val tokenResponse = app.get(
+            "$mainUrl/api/m3u8/${resolved.token}",
+            headers = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Referer" to "$mainUrl/"
+            )
+        )
+
+        val decryptBody = JSONObject()
+            .put(
+                "data", JSONObject()
+                    .put("state", resolvedJson.getJSONObject("result").getJSONObject("state"))
+                    .put("token_response", JSONObject(tokenResponse.text))
+            ).toString()
+
+        val decrypted = app.post(
+            "$multiDecryptAPI/dec-reanime?type=decrypt",
+            requestBody = decryptBody.toRequestBody("application/json".toMediaType()),
+            timeout = 10000L
+        ).parsedSafe<ReAnimeStream>()?.result ?: return
+
+        val videoHeaders = mapOf(
+            "accept" to "*/*",
+            "accept-language" to "en-GB,en-US;q=0.9,en;q=0.8",
+            "dnt" to "1",
+            "origin" to mainUrl,
+            "priority" to "u=1, i",
+            "referer" to "$mainUrl/",
+            "sec-ch-ua" to "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\"",
+            "sec-ch-ua-mobile" to "?0",
+            "sec-ch-ua-platform" to "\"Linux\"",
+            "sec-fetch-dest" to "empty",
+            "sec-fetch-mode" to "cors",
+            "sec-fetch-site" to "same-site",
+            "sec-gpc" to "1",
+            "user-agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+        )
+
+        callback.invoke(
+            newExtractorLink(
+                name,
+                name,
+                decrypted.stream,
+                ExtractorLinkType.M3U8
+            ) {
+                this.headers = videoHeaders
+                this.quality = Qualities.P1080.value
+            }
+        )
+
+    }
+}
+
 class Rapidshare : MegaUp() {
     override var mainUrl = "https://rapidshare.cc"
     override val requiresReferer = true
@@ -1167,56 +1197,6 @@ open class MegaUp : ExtractorApi() {
         @param:JsonProperty("result") val result: String
     )
 
-}
-
-class Gdshine : ExtractorApi() {
-    override val name = "Gdshine"
-    override val mainUrl = "https://gdshine.org"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val id = url.substringAfterLast('/')
-
-        val fileData = app.get("$mainUrl/api/files/s/$id")
-            .parsedSafe<Response>()
-            ?.data ?: return
-
-        val workerData = app.post("$mainUrl/api/downloads/${fileData.id}/via-worker")
-            .parsedSafe<Worker>()
-            ?.data ?: return
-
-        callback(
-            newExtractorLink(
-                name,
-                "[Gdshine] $referer",
-                workerData.copyUrl
-            ) {
-                quality = getIndexQuality(fileData.name)
-            }
-        )
-    }
-
-    data class Response(
-        val data: Data
-    )
-
-    data class Data(
-        val id: String,
-        val name: String
-    )
-
-    data class Worker(
-        val data: WorkerData
-    )
-
-    data class WorkerData(
-        val copyUrl: String
-    )
 }
 
 open class PpzjYoutube : ExtractorApi() {
@@ -1483,3 +1463,4 @@ open class Asianload : ExtractorApi() {
         }
     }
 }
+

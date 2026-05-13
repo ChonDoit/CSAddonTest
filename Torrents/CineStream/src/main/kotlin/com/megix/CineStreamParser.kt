@@ -77,15 +77,11 @@ data class VidfastServers(
 )
 
 data class VidfastStreamResponse(
-    val status: Long,
-    val result: List<VidfastServers>,
-    val info: String,
+    val result: List<VidfastServers>
 )
 
 data class VidfastServersStreamRoot(
-    val status: Long,
     val result: VidfastServer,
-    val info: String,
 )
 
 data class VidfastServer(
@@ -765,4 +761,95 @@ data class OneVideoSource(
 data class OneSubtitleTrack(
     val file: String,
     val name: String,
+)
+
+//Reanime
+
+data class ReanimeResponse(
+    val success: Boolean,
+    val servers: List<ReanimeServer>
+)
+
+data class ReanimeServer(
+    val serverName: String,
+    val dataLink: String,
+    val dataType: String,
+)
+
+data class ResolvedReAnime(
+    val result: ResolvedReAnimeResult,
+)
+
+data class ResolvedReAnimeResult(
+    val token: String,
+    val state: ResolvedReAnimeState,
+)
+
+data class ResolvedReAnimeState(
+    val token: String,
+)
+
+data class ReAnimeStream(
+    val result: ReAnimeStreamResult,
+)
+
+data class ReAnimeStreamResult(
+    val stream: String,
+)
+
+//Animesalt
+
+data class AnimeSaltData(
+    val videoSource: String? = null,
+    val securedLink: String? = null,
+)
+
+//Lordflix
+
+data class LordflixCaption(
+    val url: String,
+    val language: String?
+)
+
+data class LordflixStream(
+    val type: String,
+    val playlist: String? = null,
+    val captions: List<LordflixCaption>? = null
+)
+
+data class LordflixDecResult(
+    val stream: List<LordflixStream>? = null,
+    val error: String? = null
+)
+
+data class LordflixDecResponse(
+    val status: Int,
+    val result: LordflixDecResult? = null
+)
+
+//Vidsync
+
+data class VidsyncSource(
+    val url: String,
+    val quality: String? = null,
+    val streamType: String,
+    val server: String? = null
+)
+
+data class VidsyncSubtitle(
+    val file: String,
+    val label: String? = null,
+    val type: String? = null
+)
+
+data class VidsyncResult(
+    val sourceMode: String? = null,
+    val sources: List<VidsyncSource>? = null,
+    val subtitles: List<VidsyncSubtitle>? = null
+)
+
+data class VidsyncResponse(
+    val status: Int,
+    val result: VidsyncResult? = null,
+    val error: String? = null
 )

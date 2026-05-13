@@ -159,8 +159,8 @@ data class ResultWrapper(
 )
 
 data class RandomSlideShow(
-    @JsonProperty("_id") val id: String?,
-    @JsonProperty("id") val id2: String?,
+    @param:JsonProperty("_id") val id: String?,
+    @param:JsonProperty("id") val id2: String?,
     val title: String?,
     val image: String?,
     val country: String?,
@@ -174,8 +174,8 @@ data class RandomSlideShow(
 )
 
 data class Recent(
-    @JsonProperty("_id") val id: String?,
-    @JsonProperty("id") val id2: String?,
+    @param:JsonProperty("_id") val id: String?,
+    @param:JsonProperty("id") val id2: String?,
     val title: String?,
     val image: String?,
     val country: String?,

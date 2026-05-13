@@ -36,13 +36,10 @@ class Latanime : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
 
     override val mainPage = mainPageOf(
-        "animes?fecha=false&genero=false&letra=false&categoria=latino" to "Anime Latino",
         "animes?fecha=false&genero=false&letra=false&categoria=anime" to "Anime",
-        "animes?fecha=false&genero=false&letra=false&categoria=Película%20Latino" to "Película Latino",
-        "animes?fecha=false&genero=false&letra=false&categoria=Película" to "Película Subtitulado",
-        "animes?fecha=false&genero=false&letra=false&categoria=ova-latino" to "OVA Latino",
-        "animes?fecha=false&genero=false&letra=false&categoria=ova" to "OVA",
-        "animes?fecha=false&genero=false&letra=false&categoria=especial" to "Especial"
+        "animes?fecha=false&genero=false&letra=false&categoria=Película" to "Película",
+        "animes?fecha=false&genero=false&letra=false&categoria=especial" to "Especial",
+        "animes?fecha=false&genero=false&letra=false&categoria=donghua" to "Donghua",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -84,24 +81,12 @@ class Latanime : MainAPI() {
         val epsAnchor   = document.select("div.row a[href*='/ver/']")
 
         return if (epsAnchor.size > 1) {
-            val episodes: List<Episode>? = epsAnchor.mapIndexed { index, it ->
-
+            val episodes: List<Episode>? = epsAnchor.map {
                 val epPoster = it.select("img").attr("data-src")
                 val epHref   = it.attr("href")
 
                 newEpisode(epHref) {
-
                     this.posterUrl = epPoster
-
-                    // 🔥 ESTO ES LA CLAVE REAL
-                    this.name = "Episodio ${index + 1}"
-                    this.episode = index + 1
-
-                    // 🔥 FORZAR QUE SEA TRATADO COMO SERIE
-                    this.season = 1
-
-                    // 🔥 IMPORTANTE: descripción (activa UI avanzada)
-                    this.description = "Episodio ${index + 1}"
                 }
             }
 

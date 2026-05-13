@@ -57,12 +57,11 @@ open class CineStream: Plugin() {
         registerExtractorAPI(Gofile())
         registerExtractorAPI(Videostr())
         registerExtractorAPI(Streameeeeee())
-        registerExtractorAPI(ZenCloudz())
         registerExtractorAPI(PpzjYoutube())
         registerExtractorAPI(Asianload())
         registerExtractorAPI(Embedload())
-        registerExtractorAPI(Gdshine())
         registerExtractorAPI(Cloudnestra())
+        registerExtractorAPI(FlixCloud())
 
         this.openSettings = { ctx: Context ->
             Settings.showSettingsDialog(ctx) {

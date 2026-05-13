@@ -322,7 +322,7 @@ data class Subtitles(
 data class Subtitle(
     val id: String,
     val url: String,
-    @JsonProperty("SubEncoding")
+    @param:JsonProperty("SubEncoding")
     val subEncoding: String,
     val lang: String,
     val m: String,

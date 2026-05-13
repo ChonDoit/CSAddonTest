@@ -41,10 +41,6 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import java.math.BigInteger
 
-// Extractors
-import com.lagradost.cloudstream3.extractors.VidHidePro
-import com.lagradost.cloudstream3.extractors.StreamWishExtractor
-
 // Settings
 import com.megix.settings.Settings
 
@@ -434,6 +430,11 @@ fun String?.createSlug(): String? {
         ?.lowercase()
 }
 
+fun quote(s: String): String =
+    URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+
+fun String.capitalizeServer() = replaceFirstChar { it.uppercase() }
+
 suspend fun extractMdrive(url: String): List<String> {
     val doc = app.get(url).document
     return doc.select("a")
@@ -648,14 +649,27 @@ suspend fun getHindMoviezLinks(
 ) {
     val response = app.get(url)
     val doc = response.document
-    // val name = doc.select("div.container p:contains(Name:)").text().substringAfter("Name: ")
-    // val fileSize = doc.select("div.container p:contains(Size:)").text().substringAfter("Size: ")
-    // val simplifiedTitle = getSimplifiedTitle(name + fileSize)
-    val link = doc.select("a.btn-danger").attr("href")
+    val name = doc.select("div.container p:contains(Name:)").text().substringAfter("Name: ")
+    val fileSize = doc.select("div.container p:contains(Size:)").text().substringAfter("Size: ")
+    val simplifiedTitle = getSimplifiedTitle(name + fileSize)
+    val link = doc.select("a.btn-info").attr("href")
+    val document = app.get(link, timeout = 30000L).document
 
-    Log.d("HindMoviez", "link: $link")
+    document.select("a.button").safeAmap {
+        val source = it.attr("href")
 
-    loadSourceNameExtractor(source, link, "", subtitleCallback, callback)
+        callback.invoke(
+            newExtractorLink(
+                "Hindmoviez",
+                "Hindmoviez $simplifiedTitle $fileSize",
+                source,
+                ExtractorLinkType.VIDEO
+            ) {
+                this.quality = getIndexQuality(name)
+            }
+        )
+
+    }
 
 }
 
@@ -764,11 +778,7 @@ suspend fun loadCustomExtractor(
         }
     }
 
-    when {
-        serverName.contains("Vidhide", true) -> VidHidePro().getUrl(url, referer, subtitleCallback, processLink)
-        serverName.contains("Streamwish", true) -> StreamWishExtractor().getUrl(url, referer, subtitleCallback, processLink)
-        else -> loadExtractor(url, referer, subtitleCallback, processLink)
-    }
+    loadExtractor(url, referer, subtitleCallback, processLink)
 }
 
 fun fixUrl(url: String, domain: String): String {
@@ -1179,7 +1189,7 @@ suspend fun getGojoStreams(
                 newExtractorLink(
                     "Animetsu [${lang.uppercase()}] [${provider.uppercase()}]",
                     "Animetsu [${lang.uppercase()}] [${provider.uppercase()}]",
-                    fixUrl(url, "https://mega-cloud.top/proxy"),
+                    fixUrl(url, "https://swiftstream.top/proxy"),
                     type = if (videoType == "video/mp4") ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
                 ) {
                     this.quality = quality ?: Qualities.P1080.value
@@ -1274,51 +1284,6 @@ fun decryptVidzeeUrl(encryptedUrl: String, secret: String): String? {
         String(cipher.doFinal(ciphertext), Charsets.UTF_8)
     } catch (e: Exception) {
         null
-    }
-}
-
-suspend fun getUpcloud(
-    iframeUrl: String,
-    referer: String,
-    callback: (ExtractorLink) -> Unit
-) {
-    val html = app.get(iframeUrl, referer = referer).text
-    val sourceEncoded = Regex("""var\s+source\s*=\s*"([^"]+)\"""")
-        .find(html)?.groupValues?.get(1) ?: return
-    val sourceUrl = JSONObject("""{"v":"$sourceEncoded"}""").optString("v")
-    val domain    = sourceUrl.toHttpUrl().host
-    val embedType = sourceUrl.toHttpUrl().pathSegments.getOrNull(0) ?: return
-    val iframeHeaders = mapOf(
-        "User-Agent"       to USER_AGENT,
-        "Referer"          to "https://$domain/",
-        "X-Requested-With" to "XMLHttpRequest"
-    )
-    val htmlSource = app.get(sourceUrl, headers = iframeHeaders).text
-    val videoId = Regex("""<title>File\s+#([A-Za-z0-9]+)\s*-""")
-        .find(htmlSource)?.groupValues?.get(1) ?: return
-    val nonce = Regex("""\b[a-zA-Z0-9]{48}\b""").find(htmlSource)?.value
-        ?: run {
-            val m = Regex("""\b([a-zA-Z0-9]{16})\b.*?\b([a-zA-Z0-9]{16})\b.*?\b([a-zA-Z0-9]{16})\b""")
-                .find(htmlSource) ?: return
-            m.groupValues.drop(1).joinToString("")
-        }
-    val api = "https://$domain/$embedType/v3/e-1/getSources?id=$videoId&_k=$nonce"
-    val streamsData = runCatching { JSONObject(app.get(api, headers = iframeHeaders).text) }.getOrNull() ?: return
-    val sources  = streamsData.optJSONArray("sources") ?: return
-
-    for (i in 0 until sources.length()) {
-        val streamUrl = sources.getJSONObject(i).optString("file").ifEmpty { return }
-        callback.invoke(
-            newExtractorLink(
-                "VidsrcCC[UpCloud]",
-                "VidsrcCC[UpCloud]",
-                streamUrl,
-                ExtractorLinkType.M3U8
-            ) {
-                this.headers = iframeHeaders
-                this.quality = 1080
-            }
-        )
     }
 }
 

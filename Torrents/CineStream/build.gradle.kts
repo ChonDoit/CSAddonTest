@@ -1,7 +1,6 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
-version = 421
-
+version = 431
 android {
     namespace = "com.megix"
     defaultConfig {
