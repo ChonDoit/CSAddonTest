@@ -13,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class CuevanaProvider : MainAPI() {
-    override var mainUrl = "https://cuevana3.cz"
+    override var mainUrl = "https://cuevana23.xyz"
     override var name = "Cuevana"
     override var lang = "mx"
     override val hasMainPage = true
