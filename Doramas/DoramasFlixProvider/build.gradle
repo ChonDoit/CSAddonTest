@@ -1,0 +1,30 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'com.lagradost.cloudstream3.gradle'
+
+cloudstream {
+    setRepo("https://github.com/Darstrestvx/LatinoRepository")
+}
+
+android {
+    namespace "com.latino.doramasflix"
+    compileSdkVersion 35
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 35
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    implementation "com.github.recloudstream.cloudstream:library:-SNAPSHOT"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.3.0"
+    implementation "org.jsoup:jsoup:1.18.3"
+    implementation "com.github.Blatzar:NiceHttp:0.4.11"
+}
