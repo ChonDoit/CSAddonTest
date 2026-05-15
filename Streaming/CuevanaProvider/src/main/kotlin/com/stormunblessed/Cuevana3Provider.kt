@@ -158,13 +158,13 @@ class Cuevana3Provider : MainAPI() {
     ): Boolean {
         val doc = app.get(data).document
 
-        doc.select("ul.tabs-video li.tab-video-item").forEach { tab ->
+        for (tab in doc.select("ul.tabs-video li.tab-video-item")) {
             val lang = tab.selectFirst("div.tab-item-name")?.ownText()?.trim()
                 ?.ifBlank { "Unknown" } ?: "Unknown"
 
-            tab.select("ul li[data-server]").forEach { li ->
+            for (li in tab.select("ul li[data-server]")) {
                 val serverUrl = li.attr("data-server").trim()
-                if (serverUrl.isBlank()) return@forEach
+                if (serverUrl.isBlank()) continue
                 val serverName = li.selectFirst("span")?.text()?.trim() ?: "Server"
                 val sourceName = "[$lang] $serverName"
 
