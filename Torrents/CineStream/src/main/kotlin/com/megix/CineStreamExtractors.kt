@@ -13,13 +13,8 @@ import com.lagradost.api.Log
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MediaType.Companion.toMediaType
 
-// Gson & Jackson
+// Jackson
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.google.gson.Gson
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import com.google.gson.reflect.TypeToken
 
 // Org JSON & Jsoup
 import org.json.JSONArray
@@ -35,7 +30,6 @@ import java.security.SecureRandom
 import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
-import android.net.Uri
 
 import com.megix.settings.Settings
 
@@ -45,7 +39,6 @@ import kotlinx.coroutines.sync.withLock
 object CineStreamExtractors {
 
     private val cfKiller by lazy { CloudflareKiller() }
-    private val globalGson by lazy { Gson() }
     private val cfMutex = Mutex()
 
     suspend fun invokeAllSources(
@@ -104,12 +97,8 @@ object CineStreamExtractors {
             (it as? Map<*, *>)?.get("title") as? String
         }
 
-        val animekaiUrl = malsync?.animekai?.values?.firstNotNullOfOrNull {
-            (it as? Map<*, *>)?.get("url") as? String
-        }
-
         // Package the API results for the registry
-        val malData = MalSyncData(title, animepaheUrl, aniId, malId, episode, year, origin, animepaheTitle, animekaiUrl)
+        val malData = MalSyncData(title, animepaheUrl, aniId, malId, episode, year, origin, animepaheTitle)
 
         Log.d("Malsync", "malData: $malData")
 
@@ -704,135 +693,6 @@ object CineStreamExtractors {
         sourceList.safeAmap { loadSourceNameExtractor("Rtally", it, "", subtitleCallback, callback) }
     }
 
-    suspend fun invokeYflix(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        data class ServerItem(val name: String, val lid: String)
-
-        suspend fun encrypt(id: String): String {
-            val body = app.get("$multiDecryptAPI/enc-movies-flix?text=$id").text
-            val json = JSONObject(body)
-            return json.getString("result")
-        }
-
-        suspend fun decrypt(text: String): String {
-            val jsonBody = mapOf("text" to text)
-            val text = app.post(
-                "$multiDecryptAPI/dec-movies-flix",
-                json = jsonBody
-            ).text
-
-            val json = JSONObject(text)
-            return json.getJSONObject("result").getString("url")
-        }
-
-        fun extractAllServers(root: JSONObject): List<ServerItem> {
-            val list = mutableListOf<ServerItem>()
-
-            try {
-                val result = root.optJSONObject("result")
-                val defaultObj = result?.optJSONObject("default")
-
-                if (defaultObj != null) {
-                    val keys = defaultObj.keys()
-
-                    while (keys.hasNext()) {
-                        val key = keys.next()
-                        val serverNode = defaultObj.optJSONObject(key)
-
-                        val lid = serverNode?.optString("lid")
-                        val name = serverNode?.optString("name")
-
-                        if (!lid.isNullOrEmpty() && !name.isNullOrEmpty()) {
-                            list.add(ServerItem(name, lid))
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            return list
-        }
-
-        suspend fun parseHtml(html: String): JSONObject {
-            val resp = app.post(
-                "$multiDecryptAPI/parse-html",
-                json = mapOf("text" to html)
-            ).text
-
-            return try {
-                JSONObject(resp)
-            } catch (e: Exception) {
-                val clean = resp.trim('"')
-                    .replace("\\\"", "\"")
-                    .replace("\\\\", "\\")
-
-                try {
-                    JSONObject(clean)
-                } catch (fatal: Exception) {
-                    JSONObject()
-                }
-            }
-        }
-
-        val YflixAPI = returnWorkingUrl(multipleYflixAPI) ?: return
-
-        Log.d("Yflix", "Using API: $YflixAPI")
-
-        val findUrl = "https://enc-dec.app/db/flix/find?tmdb_id=$tmdbId"
-        val findResp = app.get(findUrl).text
-        val findJson = JSONArray(findResp)
-        if (findJson.length() == 0) return
-
-        val contentId = findJson.getJSONObject(0).optJSONObject("info")?.optString("flix_id")
-            ?: return
-        val encId = encrypt(contentId)
-        val seasonText = if(season == null) "1" else "$season"
-        val episodeText = if(episode == null) "1" else "$episode"
-        val episodesUrl = "$YflixAPI/ajax/episodes/list?id=$contentId&_=$encId"
-        val episodesResp = app.get(episodesUrl).text
-        val episodesHtml = JSONObject(episodesResp).getString("result")
-        val episodesObj = parseHtml(episodesHtml)
-        val result = episodesObj.optJSONObject("result")
-        val seasonObj = result?.optJSONObject(seasonText)
-        val episodeObj = seasonObj?.optJSONObject(episodeText)
-        val eid = episodeObj?.optString("eid")
-
-        if (eid.isNullOrEmpty()) return
-
-        val encTargetId = encrypt(eid)
-        val serversUrl = "$YflixAPI/ajax/links/list?eid=$eid&_=$encTargetId"
-        val serversResp = app.get(serversUrl).text
-        val serversHtml = JSONObject(serversResp).getString("result")
-        val serversObj = parseHtml(serversHtml)
-        val servers = extractAllServers(serversObj)
-
-        servers.safeAmap { server ->
-            val lid = server.lid
-            val encLid = encrypt(lid)
-            val serverName = server.name
-            val embedUrlReq = "$YflixAPI/ajax/links/view?id=$lid&_=$encLid"
-            val embedRespStr = app.get(embedUrlReq).text
-            val encryptedEmbed = JSONObject(embedRespStr).getString("result")
-            if (encryptedEmbed.isEmpty()) return@safeAmap
-            var embed_url = decrypt(encryptedEmbed)
-
-            Log.d("Yflix", "embed_url: $embed_url")
-
-            if(embed_url.contains(YflixAPI)) {
-                embed_url = cfGet(embed_url).document.selectFirst("iframe")?.attr("src") ?: return@safeAmap
-            }
-
-            Log.d("Yflix", "embed_url: $embed_url")
-
-            MegaUp().getUrl(embed_url, "Yflix", subtitleCallback, callback)
-        }
-    }
-
     suspend fun invokeStremioStreams(
         sourceName: String, api: String, imdbId: String? = null,
         season: Int? = null, episode: Int? = null,
@@ -842,27 +702,18 @@ object CineStreamExtractors {
         val url = if (sourceName == "Hdmovielover") "$api/${if (isMovie) "movie?imdbid=$imdbId" else "series?imdbid=$imdbId&s=$season&e=$episode"}"
                 else "$api/stream/${if (isMovie) "movie/$imdbId" else "series/$imdbId:$season:$episode"}.json"
 
-        globalGson.fromJson(app.get(url, timeout = 50000L).text, StreamifyResponse::class.java).streams.forEach { s ->
+        parseJson<StreamifyResponse>(app.get(url, timeout = 50000L).text).streams.forEach { s ->
             val title = s.title ?: ""
             val name = s.name ?: title
 
             // Block filters
             if (s.url.contains("github.com") || s.url.contains("googleusercontent") ||
-                listOf("4KHDHub", "Instant Download", "IOSMIRROR", "XDM").any { name.contains(it) } ||
+                listOf("Instant Download").any { name.contains(it) } ||
                 title.contains("redirecting")) return@forEach
 
-            val type = if (sourceName.contains("Castle") || listOf("hls", "m3u8", "Vixsrc").any { (title + name).contains(it, true) }) ExtractorLinkType.M3U8 else INFER_TYPE
+            val type = if (listOf("hls", "m3u8", "Vixsrc").any { (title + name).contains(it, true) }) ExtractorLinkType.M3U8 else INFER_TYPE
             val req = s.behaviorHints?.proxyHeaders?.request
-            val streamUrl = if (sourceName.contains("Castle")) {
-                URI(s.url).query
-                ?.split("&")
-                ?.firstOrNull { it.startsWith("url=") }
-                ?.removePrefix("url=")
-                ?: return@forEach
-            } else {
-                s.url
-            }
-
+            val streamUrl = s.url
             val proxyReq = s.behaviorHints?.proxyHeaders?.request
             val stdHeaders = s.behaviorHints?.headers
 
@@ -871,10 +722,9 @@ object CineStreamExtractors {
             val extractedUserAgent = proxyReq?.userAgent ?: stdHeaders?.get("User-Agent") ?: stdHeaders?.get("user-agent") ?: USER_AGENT
 
             // Quality fallback
-            val quality = getIndexQuality(title + name).takeIf { it != Qualities.Unknown.value }
-                ?: if (sourceName.contains("Castle")) Qualities.P1080.value else Qualities.Unknown.value
+            val quality = getIndexQuality(title + name)
 
-            callback(newExtractorLink(sourceName, "[$sourceName]".toSansSerifBold() + " ${if (sourceName == "Hdmovielover") getSimplifiedTitle(title) else title}", streamUrl, type) {
+            callback(newExtractorLink(sourceName, "[$sourceName]".toSansSerifBold() + " ${title}", streamUrl, type) {
                 this.quality = quality
                 this.headers = mapOf(
                     "User-Agent" to extractedUserAgent,
@@ -1240,7 +1090,7 @@ object CineStreamExtractors {
 
         Log.d("Vidlink", "ep response: $epJson")
 
-        val data = globalGson.fromJson(epJson, VidlinkResponse::class.java)
+        val data = parseJson<VidlinkResponse>(epJson)
         val m3u8 = data.stream.playlist
 
         M3u8Helper.generateM3u8(
@@ -1299,7 +1149,7 @@ object CineStreamExtractors {
                 }
 
                 val json = app.get(url).text
-                val subtitleResponse = globalGson.fromJson(json, StremioSubtitleResponse::class.java)
+                val subtitleResponse = parseJson<StremioSubtitleResponse>(json)
 
                 subtitleResponse.subtitles.forEach {
                     val lang = it.lang ?: it.lang_code
@@ -1316,50 +1166,6 @@ object CineStreamExtractors {
             } catch (e: Exception) {
                 println("Error fetching/parsing subtitle from: $subUrl - ${e.message}")
             }
-        }
-    }
-
-    suspend fun invokeSudatchi(
-        aniId: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val headers = mapOf(
-            "Referer" to sudatchiAPI,
-            "Origin" to sudatchiAPI,
-        )
-
-        val json = app.get("$sudatchiAPI/api/episode/$aniId/$episode", headers = headers).text
-        val jsonObject = JSONObject(json)
-        val episode = jsonObject.getJSONObject("episode")
-        val epId = episode.getInt("id")
-        val url = "$sudatchiAPI/api/streams?episodeId=$epId"
-        callback.invoke(
-            newExtractorLink(
-                "Sudatchi",
-                "Sudatchi Multi Audio 🌐",
-                url,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.quality = 1080
-                this.headers = headers
-            }
-        )
-
-        val subsJson = JSONArray(jsonObject.getString("subtitlesJson"))
-
-        for (i in 0 until subsJson.length()) {
-            val sub = subsJson.getJSONObject(i)
-            val subUrl = sub.getString("url").replace("/ipfs", "").replace("\\", "")
-            val file = "$sudatchiAPI/api/proxy$subUrl"
-            val label = sub.getJSONObject("SubtitlesName").getString("name")
-            subtitleCallback.invoke(
-                newSubtitleFile(
-                    getLanguage(label) ?: label,
-                    file
-                )
-            )
         }
     }
 
@@ -1665,106 +1471,6 @@ object CineStreamExtractors {
         }
     }
 
-    suspend fun invokeAnimekai(
-        animekaiUrl: String? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val headers = mapOf(
-            "User-Agent" to USER_AGENT,
-            "Connection" to "keep-alive",
-        )
-
-        suspend fun encrypt(id: String): String {
-            val body = app.get("$multiDecryptAPI/enc-kai?text=$id").text
-            val json = JSONObject(body)
-            return json.getString("result")
-        }
-
-        data class ServerInfo(
-            val serverType: String,
-            val lid: String?,
-        )
-
-        fun getEpisodeToken(html: String, episode: Int): String? {
-            val doc = Jsoup.parse(html)
-            val selector = "div.eplist ul.range li a[num=\"$episode\"]"
-            val episodeElement = doc.selectFirst(selector)
-            return episodeElement?.attr("token")
-        }
-
-        fun parseServersFromHtml(html: String): List<ServerInfo> {
-            val doc = Jsoup.parse(html)
-            val servers = mutableListOf<ServerInfo>()
-
-            val groups = doc.select("div.server-items.lang-group")
-            for (grp in groups) {
-                val serverType = grp.attr("data-id").uppercase()
-                for (span in grp.select("span.server")) {
-                    val lid = span.attr("data-lid").ifBlank { null }
-                    servers.add(ServerInfo(serverType, lid))
-                }
-            }
-            return servers
-        }
-
-        suspend fun decrypt(text: String): String {
-            val jsonBody = mapOf("text" to text)
-
-            val text = app.post(
-                "$multiDecryptAPI/dec-kai",
-                json = jsonBody
-            ).text
-
-            val json = JSONObject(text)
-            return json.getJSONObject("result").getString("url")
-        }
-
-        val animekaiAPI = returnWorkingUrl(multipleAnimekaiAPI) ?: return
-        val oldBaseUrl = getBaseUrl(animekaiUrl ?: return)
-        val postUrl = animekaiUrl.replace(oldBaseUrl, animekaiAPI)
-
-        Log.d("Animekai", "postUrl: $postUrl")
-
-        val id = app.get(postUrl)
-            .document
-            .selectFirst("div.rate-box")?.attr("data-id") ?: return
-
-        Log.d("Animekai", "id: $id")
-
-        val enc_id = encrypt(id)
-        val json = app.get("$animekaiAPI/ajax/episodes/list?ani_id=$id&_=$enc_id", headers = headers).text
-
-        Log.d("Animekai", "json: $json")
-
-        val html = JSONObject(json).getString("result")
-        val token = getEpisodeToken(html, episode ?: 1) ?: return
-        val enc_token = encrypt(token)
-        val servers_resp = app.get("$animekaiAPI/ajax/links/list?token=$token&_=$enc_token", headers = headers).text
-        val servers = JSONObject(servers_resp).getString("result")
-        val all = parseServersFromHtml(servers)
-
-        all.safeAmap {
-            val lid = it.lid ?: return@safeAmap
-            val enc_lid = encrypt(lid)
-            val type = it.serverType
-            val embed_resp = app.get("$animekaiAPI/ajax/links/view?id=$lid&_=$enc_lid", headers = headers).text
-            val encrypted = JSONObject(embed_resp).getString("result")
-            var embed_url = decrypt(encrypted)
-
-            Log.d("Animekai", "embed_url: $embed_url")
-
-            if(embed_url.contains(animekaiAPI)) {
-                embed_url = cfGet(embed_url).document.selectFirst("iframe")?.attr("src") ?: return@safeAmap
-            }
-
-            Log.d("Animekai", "embed_url: $embed_url")
-
-            MegaUp().getUrl(embed_url, "Animekai[$type]", subtitleCallback, callback)
-        }
-    }
-
     suspend fun invokeOnetouchtv(
         title: String? = null,
         airedYear: Int? = null,
@@ -1793,8 +1499,7 @@ object CineStreamExtractors {
         //get result
         val result = JSONObject(decrypt).getJSONArray("result").toString()
 
-        val listType = object : TypeToken<List<OneMediaItem>>() {}.type
-        val mediaItems: List<OneMediaItem> = globalGson.fromJson(result, listType)
+        val mediaItems: List<OneMediaItem> = parseJson<List<OneMediaItem>>(result)
 
         Log.d("Onetouchtv", "mediaItems: $mediaItems")
 
@@ -1813,7 +1518,7 @@ object CineStreamExtractors {
 
         val sourceResult = JSONObject(decryptSource).getJSONObject("result").toString()
 
-        val playbackData = globalGson.fromJson(sourceResult, OnePlaybackData::class.java)
+        val playbackData = parseJson<OnePlaybackData>(sourceResult)
 
         playbackData.sources.forEach { source ->
 
@@ -2387,8 +2092,7 @@ object CineStreamExtractors {
         val json = app.get("$anizipAPI/mappings?$type=$id").text
         val epId = getEpAnizipId(json, episode ?: 1) ?: return
         val json2 = app.get("$animetoshoAPI/json?eid=$epId").text
-        val listType = object : TypeToken<List<Animetosho>>() {}.type
-        val items: List<Animetosho> = globalGson.fromJson(json2, listType)
+        val items: List<Animetosho> = parseJson<List<Animetosho>>(json2)
         // val filtered = items.filter { (it.seeders ?: 0) > 25 }
         // val sorted = filtered.sortedByDescending { it.seeders ?: -1 }
 
@@ -3100,8 +2804,6 @@ object CineStreamExtractors {
                 val epData =
                     """$AllanimeAPI?variables={"showId":"$id","translationType":"$i","episodeString":"${episode ?: 1}"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$ephash"}}"""
 
-                Log.d("Allanime", "Episode Data URL: $epData")
-
                 val eplinks = app.get(epData, headers = headers)
                     .parsedSafe<AnichiEP>()?.data?.episode?.sourceUrls
 
@@ -3110,6 +2812,7 @@ object CineStreamExtractors {
                 eplinks?.safeAmap { source ->
                     safeApiCall {
                         val sourceUrl = source.sourceUrl
+
                         if (sourceUrl.startsWith("http")) {
                             val sourcename = sourceUrl.getHost()
                             loadCustomExtractor(
@@ -3450,27 +3153,27 @@ object CineStreamExtractors {
 
         Log.d("Bollywood", "Response: $response")
 
-        val jsonObject = JsonParser.parseString(response).asJsonObject
+        val jsonObject = JSONObject(response)
 
         if (jsonObject.has("files")) {
-            val filesArray = jsonObject.getAsJsonArray("files")
+            val filesArray = jsonObject.getJSONArray("files")
 
-            filesArray.forEach { element ->
-                val item = element.asJsonObject
-                val fileName = item.get("file_name").asString
-                if(fileName.contains(".$titleSlug")) return@forEach
-                val fileId = item.get("id").asString
+            for (i in 0 until filesArray.length()) {
+                val item = filesArray.getJSONObject(i)
+                val fileName = item.optString("file_name")
+                if (fileName.contains(".$titleSlug")) continue
+                val fileId = item.optString("id")
                 Log.d("Bollywood", "Processing file ID: $fileId")
-                val size = formatSize(item.get("file_size").asString.toLong())
+                val size = formatSize(item.optString("file_size").toLong())
                 val res = app.get(
                     "$bollywoodAPI/genLink?type=files&id=$fileId",
                     headers = headers
                 ).text
                 Log.d("Bollywood", "Link response for file ID $fileId: $res")
 
-                val linkJson = JsonParser.parseString(res).asJsonObject
+                val linkJson = JSONObject(res)
                 if (linkJson.has("url")) {
-                    val streamUrl = linkJson.get("url").asString
+                    val streamUrl = linkJson.optString("url")
                     val simplifiedTitle = getSimplifiedTitle("$fileName $size")
 
                     callback.invoke(
@@ -3636,7 +3339,7 @@ object CineStreamExtractors {
             "$api/stream/series/$imdbId:$season:$episode.json"
         }
 
-        globalGson.fromJson(app.get(url, timeout = 100000L).text, StreamifyResponse::class.java).streams.forEach { s ->
+        parseJson<StreamifyResponse>(app.get(url, timeout = 100000L).text).streams.forEach { s ->
             val title = s.description ?: s.title ?: s.name ?: ""
 
             val type = if(s.url.contains(".m3u8") || s.url.contains("hls")) {
@@ -3689,7 +3392,7 @@ object CineStreamExtractors {
         }
 
         val json = app.get(url, timeout = 100000L).text
-        val subtitleResponse = globalGson.fromJson(json, StremioSubtitleResponse::class.java)
+        val subtitleResponse = parseJson<StremioSubtitleResponse>(json)
 
         subtitleResponse.subtitles.forEach {
             val lang = it.lang ?: it.lang_code
@@ -3890,71 +3593,6 @@ object CineStreamExtractors {
                     )
                 }
             }
-        }
-    }
-
-    suspend fun invokePulp(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = if (season == null) {
-            "$pulpAPI/movies/$tmdbId?provider=02moviedownloader"
-        } else {
-            "$pulpAPI/tv/$tmdbId/seasons/$season/episodes/$episode?provider=02moviedownloader"
-        }
-
-        val json = app.get(url, timeout = 30000L, referer = "https://tv.pulp.watch/").text
-        Log.d("Pulp", "Response JSON: $json")
-        val response = tryParseJson<PulpResponse>(json) ?: return
-        Log.d("Pulp", "Parsed Response: $response")
-
-        response.sources?.forEach { source ->
-            val sourceUrl = source.url?.takeIf { it.isNotBlank() } ?: return@forEach
-            val qualityTag = source.quality.orEmpty().ifEmpty { "Unknown" }
-            val providerName = source.provider?.name.takeIf { !it.isNullOrBlank() }
-                ?: source.provider?.id.takeIf { !it.isNullOrBlank() }
-                ?: "Pulp"
-
-            val extractorLinkType = when {
-                sourceUrl.contains(".m3u8", true) -> ExtractorLinkType.M3U8
-                source.type.equals("hls", true) -> ExtractorLinkType.M3U8
-                source.type.equals("dash", true) -> ExtractorLinkType.DASH
-                source.type.equals("mp4", true) || source.type.equals("mkv", true) -> ExtractorLinkType.VIDEO
-                else -> INFER_TYPE
-            }
-
-            Log.d("Pulp", "Adding source: provider=$providerName, quality=$qualityTag, url=$sourceUrl, type=$extractorLinkType")
-
-            callback.invoke(
-                newExtractorLink(
-                    "Pulp [$providerName]",
-                    "Pulp [$providerName]",
-                    sourceUrl,
-                    type = extractorLinkType
-                ) {
-                    this.headers = source.headers.orEmpty().filterValues { it.isNotBlank() }
-                    this.quality = qualityTag.toIntOrNull() ?: Qualities.Unknown.value
-                }
-            )
-        }
-
-        response.subtitles?.forEach { subtitle ->
-            val subtitleUrl = subtitle.url?.takeIf { it.isNotBlank() } ?: return@forEach
-            val label = subtitle.label.takeIf { !it.isNullOrBlank() }
-                ?: subtitle.language.takeIf { !it.isNullOrBlank() }
-                ?: "Unknown"
-
-            Log.d("Pulp", "Adding subtitle: label=$label, url=$subtitleUrl")
-
-            subtitleCallback.invoke(
-                newSubtitleFile(
-                    getLanguage(label) ?: label,
-                    subtitleUrl
-                )
-            )
         }
     }
 
@@ -4785,6 +4423,7 @@ object CineStreamExtractors {
             "https://usa.eat-peach.sbs/multi",
             "https://usa.eat-peach.sbs/ice",
             "https://usa.eat-peach.sbs/air",
+            "https://usa.eat-peach.sbs/net",
             "https://uwu.peachify.top/moviebox"
         )
 
@@ -4839,6 +4478,67 @@ object CineStreamExtractors {
                         this.quality = quality
                     }
                 )
+            }
+        }
+    }
+
+    suspend fun invokeAnimedao(
+        title: String? = null,
+        year: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+
+        val searchUrl = "$animedaoAPI/search.html?keyword=$title&year%5B%5D=$year&sort=title_az"
+
+        val matchedUrl = app.get(searchUrl, referer = "$animedaoAPI/")
+            .document
+            .selectFirst("div.row > div.col-xs-12 > a")
+            ?.attr("href")
+            ?.replace("/anime/", "/watch-online/")
+            ?: return
+
+        Log.d("AnimeDao", "matchedUrl: $matchedUrl")
+
+        val document = app.get(animedaoAPI + matchedUrl + "-episode-${episode ?: 1}", referer = "$animedaoAPI/").document
+
+        document.select("ul.server-items").safeAmap { ul ->
+            val type = ul.selectFirst("li span strong")
+                ?.text()
+                ?.trim()
+                ?.removeSuffix(":")
+                ?.removeSuffix(" ")
+                ?: return@safeAmap
+
+
+            ul.select("li.server a").safeAmap { a ->
+                val rawUrl = a.attr("data-video").takeIf { it.isNotBlank() } ?: return@safeAmap
+
+                val server = a.text()
+
+                Log.d("AnimeDao", "$type rawUrl: $rawUrl")
+
+                val queryParams: Map<String, String> = rawUrl.substringAfter("?", "")
+                    .split("&")
+                    .filter { it.contains("=") }
+                    .associate<String, String, String> { param ->
+                    param.substringBefore("=") to java.net.URLDecoder.decode(
+                        param.substringAfter("="), "UTF-8"
+                    )
+                }
+
+                val subtitleUrl: String? = queryParams["sub"]
+                    ?: queryParams["caption_1"]
+                    ?: queryParams["c1_file"]
+
+                val subtitleLang: String = queryParams["sub_1"]
+                    ?: queryParams["c1_label"]
+                    ?: "English"
+
+                if(subtitleUrl != null) subtitleCallback(newSubtitleFile(subtitleLang, subtitleUrl))
+
+                loadCustomExtractor("Animedao[$type] $server", rawUrl, "$animedaoAPI/", subtitleCallback, callback)
             }
         }
     }

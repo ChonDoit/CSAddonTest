@@ -1,21 +1,29 @@
 package com.stormunblessed
 
+import android.util.Log
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.movieproviders.transformHourToLocal
 import java.text.Normalizer
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 class StreamedInfo {
     var mainUrl = "https://streamed.pk"
     var matches: MatchesResult = MatchesResult();
 
     suspend fun init() {
-        val res = app.get("$mainUrl/api/matches/all")
+//        val res = app.get("$mainUrl/api/matches/all")
+        val res = app.get("$mainUrl/api/matches/live")
         this.matches = res.parsed<MatchesResult>()
     }
 
     fun String.trimAndClean(): String {
         val normalized = Normalizer.normalize(this, Normalizer.Form.NFD)
-        return normalized.replace("\\p{M}+".toRegex(), "").replace("-", " ").trim()
+        return normalized
+            .replace("\\p{M}+".toRegex(), "")
+            .replace("-", " ")
+            .trim().lowercase()
     }
 
     fun String.containsAnyWordIgnoreCase(target: String): Boolean {
@@ -24,24 +32,38 @@ class StreamedInfo {
         return sourceWords.intersect(targetWords).isNotEmpty()
     }
 
-    fun searchPosterByDateAndTitle(date: Date, title: String): String? {
-        val epochTime = date.time
-        val searchTitle = title.substringAfter(":").trimAndClean().replace(" vs. ", " vs ")
+    fun String.containsNoSpaces(target: String): Boolean {
+        val sourceWords = this.lowercase().replace(" ", "").split("\\s+".toRegex()).toSet()
+        val targetWords = target.lowercase().replace(" ", "").split("\\s+".toRegex()).toSet()
+        return sourceWords.intersect(targetWords).isNotEmpty()
+    }
+
+    fun searchPosterByTitle(title: String): MatchId {
+        val searchTitle = title.replace(" vs. ", " vs ")
         val searchHome = searchTitle.substringBefore(" vs ").trimAndClean()
         val searchAway = searchTitle.substringAfter(" vs ").trimAndClean()
-        return this.matches.filter { epochTime == it.date }.firstOrNull {
-            val title = it.title.trimAndClean()
-            val away = it.teams?.away?.name?.trimAndClean() ?: "___"
-            val home = it.teams?.home?.name?.trimAndClean() ?: "___"
-            (searchTitle.contains(title, true) ||
-                    title.contains(searchTitle, true) ||
-                    (searchTitle.containsAnyWordIgnoreCase(away) ||
-                            searchTitle.containsAnyWordIgnoreCase(home)) ||
-                    (away.containsAnyWordIgnoreCase(searchAway) ||
-                            home.containsAnyWordIgnoreCase(searchHome)) ||
-                    (away.containsAnyWordIgnoreCase(searchHome) ||
-                            home.containsAnyWordIgnoreCase(searchAway)))
-        }?.poster?.replaceFirst("^/".toRegex(), "$mainUrl/")
+        return this.matches.firstOrNull { match ->
+            val title = match.title.replace(" vs. ", " vs ")
+            val home = match.teams?.home?.name?.trimAndClean()
+                ?: title.substringBefore(" vs ").trimAndClean()
+            val away = match.teams?.away?.name?.trimAndClean()
+                ?: title.substringAfter(" vs ").trimAndClean()
+            fun checkMatch(team: String, search: String): Boolean {
+                return when {
+                    team.containsNoSpaces(search) || search.containsNoSpaces(team) -> true
+                    team.containsAnyWordIgnoreCase(search) || search.containsAnyWordIgnoreCase(team) -> true
+                    else -> false
+                }
+            }
+            val directMatch = checkMatch(home, searchHome) && checkMatch(away, searchAway)
+            val reverseMatch = checkMatch(home, searchAway) && checkMatch(away, searchHome)
+            directMatch || reverseMatch
+        }?.let {
+            val hourFormat = SimpleDateFormat("HH:mm", Locale.US)
+            val hourString = hourFormat.format(Date(it.date))
+            val hour = transformHourToLocal(hourString);
+            MatchId(it.title, it.poster?.replaceFirst("^/".toRegex(), "$mainUrl/"), hour)
+        } ?: MatchId(title)
     }
 }
 
@@ -59,6 +81,12 @@ data class APIMatch(
     val popular: Boolean,
     val teams: Teams? = null,
     val sources: List<Source>
+)
+
+data class MatchId(
+    val title: String,
+    val poster: String? = null,
+    val hour: String? = null,
 )
 
 data class Teams(

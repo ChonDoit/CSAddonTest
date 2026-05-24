@@ -59,32 +59,32 @@ class DeporTVProvider : MainAPI() {
 
     val sites: List<Site> =
         listOf(
-            Site(SiteKey.RUSTICO, "https://rusticotv.top", "https://rusticotv.top/agenda.html"),
+            Site(SiteKey.RUSTICO, "https://rustico-tv.net", "https://rustico-tv.net/agenda.php"),
             Site(
                 SiteKey.FUTBOLLIBRE,
-                "https://futbollibre-tv.su",
-                "https://futbollibre-tv.su/es/agenda/"
+                "https://ww.futbollibre-tv.su",
+                "https://ww.futbollibre-tv.su/agenda/"
             ),
             Site(
                 SiteKey.TVTVHD,
                 "https://tvtvhd.com",
                 "https://pltvhd.com/diaries.json"
             ),
-            Site(
-                SiteKey.LA14HD,
-                "https://la14hd.com",
-                "https://la14hd.com/eventos/json/agenda123.json"
-            ),
-            Site(
-                SiteKey.STREAMTP,
-                "https://streamtp10.com",
-                "https://streamtp10.com/eventos.json?nocache=${Date().time}"
-            ),
-            Site(
-                SiteKey.STREAMXX,
-                "https://streamx10.cloud",
-                "https://streamx10.cloud/json/agenda345.json?nocache=${Date().time}",
-            ),
+             Site(
+                 SiteKey.LA14HD,
+                 "https://la14hd.com",
+                 "https://la14hd.com/eventos/json/agenda123.json"
+             ),
+             Site(
+                 SiteKey.STREAMTP,
+                 "https://streamtp-abc.net",
+                 "https://streamtp-abc.net/eventos.json?nocache=${Date().time}"
+             ),
+             Site(
+                 SiteKey.STREAMXX,
+                 "https://streamx550.com",
+                 "https://streamx741.com/json/agenda550.json?nocache=${Date().time}",
+             ),
         )
     override var name = "DeporTV"
     override var lang = "mx"
@@ -117,24 +117,27 @@ class DeporTVProvider : MainAPI() {
                 ) {
                     events = AppUtils.tryParseJson<List<La14HDMatchInfo>>(res.text)
                         ?.map {
+                            val matchId = streamedInfo.searchPosterByTitle(it.title)
                             EventData(
-                                it.title,
-                                transformHourToLocal(it.time, "GMT-5"),
+                                matchId.title,
+                                matchId.hour ?: transformHourToLocal(it.time, "GMT-5"),
                                 listOf(it.link),
-                                ""
+                                matchId.poster
                             )
                         } ?: emptyList()
                 } else if (it.key.equals(SiteKey.TVTVHD)) {
                     events = AppUtils.tryParseJson<FTVHDApiResponse>(res.text)?.data
                         ?.map {
+                            val matchId =
+                                streamedInfo.searchPosterByTitle(it.attributes.diaryDescription)
                             EventData(
-                                it.attributes.diaryDescription,
-                                transformHourToLocal(
+                                matchId.title,
+                                matchId.hour ?: transformHourToLocal(
                                     it.attributes.diaryHour.substringBeforeLast(":"),
                                     "GMT-5"
                                 ),
                                 it.attributes.embeds.data.map { it.attributes.embedIframe },
-                                ""
+                                matchId.poster
                             )
                         } ?: emptyList()
                 } else {
@@ -149,8 +152,7 @@ class DeporTVProvider : MainAPI() {
             .groupBy { it.title.substringAfter(":").trim() }
             .amap { (title, events) ->
                 val date = transformHourToDate(events.first().hour) ?: Date()
-                val posterUrl =
-                    streamedInfo.searchPosterByDateAndTitle(date, title) ?: defaultPoster
+                val posterUrl = events.first().poster ?: defaultPoster
                 EventData(
                     title = title,
                     hour = events.first().hour,
@@ -191,7 +193,8 @@ class DeporTVProvider : MainAPI() {
         val urls = this.select("ul li").mapNotNull {
             it.selectFirst("a")?.attr("href")?.replaceFirst("^/".toRegex(), "$mainUrl/")
         }
-        return EventData(matchTitle, hourLocal, urls, "")
+        val matchId = streamedInfo.searchPosterByTitle(matchTitle)
+        return EventData(matchId.title, matchId.hour ?: hourLocal, urls, matchId.poster)
     }
 
     private fun EventData.toSearchResult(): SearchResponse {
@@ -290,36 +293,37 @@ class DeporTVProvider : MainAPI() {
                 val name = frame.substringAfter(".php?$chanelNameParameter=")
                 val doc = app.get(frame).document
                 var result =
-                    doc.select("script").firstOrNull { it.html().contains("var playbackURL") }?.let {
-                        var result = ""
-                        val scriptContent = it.data().substringBefore("var p2pConfig")
-                        val rhino = Context.enter()
-                        rhino.setInterpretedMode(true)
-                        val scope = rhino.initStandardObjects()
-                        try {
-                            scope.put(
-                                "atob",
-                                scope,
-                                object : org.mozilla.javascript.BaseFunction() {
-                                    override fun call(
-                                        cx: org.mozilla.javascript.Context,
-                                        scope: org.mozilla.javascript.Scriptable,
-                                        thisObj: org.mozilla.javascript.Scriptable,
-                                        args: Array<out Any>
-                                    ): Any {
-                                        val str = args[0] as String
-                                        val decoded =
-                                            android.util.Base64.decode(str, Base64.DEFAULT)
-                                        return String(decoded, Charsets.UTF_8)
-                                    }
-                                })
-                            rhino.evaluateString(scope, scriptContent, "playbackURL", 1, null)
-                            result = scope.get("playbackURL", scope).toString()
-                        } finally {
-                            rhino.close()
+                    doc.select("script").firstOrNull { it.html().contains("var playbackURL") }
+                        ?.let {
+                            var result = ""
+                            val scriptContent = it.data().substringBefore("var p2pConfig")
+                            val rhino = Context.enter()
+                            rhino.setInterpretedMode(true)
+                            val scope = rhino.initStandardObjects()
+                            try {
+                                scope.put(
+                                    "atob",
+                                    scope,
+                                    object : org.mozilla.javascript.BaseFunction() {
+                                        override fun call(
+                                            cx: org.mozilla.javascript.Context,
+                                            scope: org.mozilla.javascript.Scriptable,
+                                            thisObj: org.mozilla.javascript.Scriptable,
+                                            args: Array<out Any>
+                                        ): Any {
+                                            val str = args[0] as String
+                                            val decoded =
+                                                android.util.Base64.decode(str, Base64.DEFAULT)
+                                            return String(decoded, Charsets.UTF_8)
+                                        }
+                                    })
+                                rhino.evaluateString(scope, scriptContent, "playbackURL", 1, null)
+                                result = scope.get("playbackURL", scope).toString()
+                            } finally {
+                                rhino.close()
+                            }
+                            result
                         }
-                        result
-                    }
                 if (!result.isNullOrEmpty()) {
                     callback(
                         newExtractorLink(
@@ -485,7 +489,7 @@ data class EventData(
     val title: String,
     val hour: String,
     val urls: List<String>,
-    val poster: String,
+    val poster: String?,
 )
 
 suspend fun loadSourceNameExtractor(
@@ -543,9 +547,10 @@ fun transformHourToDate(hourString: String): Date? {
     return calendarToday.time
 }
 
-fun transformHourToLocal(hourString: String, timezoneId: String): String {
+fun transformHourToLocal(hourString: String, timezoneId: String? = null): String {
     val inputFormat = SimpleDateFormat("HH:mm", Locale.US)
-    inputFormat.timeZone = TimeZone.getTimeZone(timezoneId)
+    inputFormat.timeZone =
+        if (!timezoneId.isNullOrBlank()) TimeZone.getTimeZone(timezoneId) else TimeZone.getDefault()
     val date = inputFormat.parse(hourString)
     val outputFormat = SimpleDateFormat("HH:mm", Locale.US)
     outputFormat.timeZone = TimeZone.getDefault() // current mobile timezone

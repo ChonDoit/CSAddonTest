@@ -287,7 +287,6 @@ class DoramasFlixProvider:MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("qwerty", "loadLinks: $data")
         if (data.contains("link")) {
             val parse = parseJson<List<LinksOnline>>(data)
             parse.map {

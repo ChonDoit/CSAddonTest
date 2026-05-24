@@ -9,16 +9,19 @@ import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 
+import com.lagradost.cloudstream3.extractors.VidHidePro
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.VidStack
+import com.lagradost.cloudstream3.extractors.ByseSX
+
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MediaType.Companion.toMediaType
 
 // Network (OkHttp & Java Net)
 import java.net.URI
 
-// JSON Parsing (Gson, Jackson, Org)
+// JSON Parsing (Jackson, Org)
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -1077,47 +1080,16 @@ class FlixCloud : ExtractorApi() {
     }
 }
 
-class Rapidshare : MegaUp() {
-    override var mainUrl = "https://rapidshare.cc"
-    override val requiresReferer = true
+class Embedload : Asianload() {
+    override val name = "Embedload"
+    override val mainUrl = "https://embedload.cfd"
+    override val requiresReferer = false
 }
 
-class Fourspromax : MegaUp() {
-    override var mainUrl = "https://4spromax.site"
-    override val requiresReferer = true
-}
-
-class MegaUpTwoTwo : MegaUp() {
-    override var mainUrl = "https://megaup22.online"
-    override val requiresReferer = true
-}
-
-class Rapidairmax : MegaUp() {
-    override var mainUrl = "https://rapidairmax.site"
-    override val requiresReferer = true
-}
-
-open class MegaUp : ExtractorApi() {
-    override var name = "MegaUp"
-    override var mainUrl = "https://megaup.live"
-    override val requiresReferer = true
-
-    companion object {
-        private val HEADERS = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-                "Accept" to "text/html, *//*; q=0.01",
-                "Accept-Language" to "en-US,en;q=0.5",
-                "Sec-GPC" to "1",
-                "Sec-Fetch-Dest" to "empty",
-                "Sec-Fetch-Mode" to "cors",
-                "Sec-Fetch-Site" to "same-origin",
-                "Priority" to "u=0",
-                "Pragma" to "no-cache",
-                "Cache-Control" to "no-cache",
-                "Referer" to "https://animekai.to/",
-                "Connection" to "keep-alive"
-        )
-    }
+open class Asianload : ExtractorApi() {
+    override val name = "Asianload"
+    override val mainUrl = "https://asianload.cfd"
+    override val requiresReferer = false
 
     override suspend fun getUrl(
         url: String,
@@ -1125,79 +1097,106 @@ open class MegaUp : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val mediaUrl = url.replace("/e/", "/media/").replace("/e2/", "/media/")
-        val displayName = referer ?: this.name
+        val document = app.get(url).document
+        val script = document.selectFirst("div#player + script")?.html() ?: return
+        val unpacked = JsUnpacker(script).unpack() ?: return
 
-        val encodedResult = app.get(mediaUrl, headers = HEADERS)
-        .parsedSafe<AnimeKaiResponse>()
-        ?.result
+        val allBase64Links = mutableListOf<String>()
 
-        Log.d("MegaUp", "encodedResult: $encodedResult")
+        val base64Regex = Regex("""window\.atob\("([^"]+)"\)""")
 
-        if (encodedResult == null) return
-
-        val m3u8Data = app.post(
-            "$multiDecryptAPI/dec-mega",
-            json = mapOf(
-                "text"  to encodedResult,
-                "agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
-            )
-        ).text
-
-        Log.d("MegaUp", "m3u8Data: $m3u8Data")
-
-        if (m3u8Data.isBlank()) {
-            Log.d("Phisher", "Encoded result is null or empty")
-            return
+        base64Regex.findAll(unpacked).forEach { match ->
+            val base64EncodedUrl = match.groupValues[1]
+            allBase64Links.add(base64EncodedUrl)
         }
 
-        try {
-            val root = JSONObject(m3u8Data)
-            val result = root.optJSONObject("result")
-            if (result == null) {
-                Log.d("Error:", "No 'result' object in M3U8 JSON")
-                return
-            }
 
-            val sources = result.optJSONArray("sources") ?: JSONArray()
-            if (sources.length() > 0) {
-                val firstSourceObj = sources.optJSONObject(0)
-                val m3u8File = when {
-                    firstSourceObj != null -> firstSourceObj.optString("file").takeIf { it.isNotBlank() }
-                    else -> {
-                        val maybeString = sources.optString(0)
-                        maybeString.takeIf { it.isNotBlank() }
+        for (base64EncodedUrl in allBase64Links) {
+            val decodedLink = base64Decode(base64EncodedUrl)
+
+            if (decodedLink.contains(".mp4")) {
+                callback(
+                    newExtractorLink(
+                        name = "AsianLoad (mp4)",
+                        source = "AsianLoad",
+                        url = decodedLink,
+                        type = ExtractorLinkType.VIDEO
+                    ){
+                        this.referer = url
+                        this.quality = Qualities.Unknown.value
                     }
-                }
-                if (m3u8File != null) {
-                    M3u8Helper.generateM3u8(displayName, m3u8File, mainUrl).forEach(callback)
-                } else {
-                    Log.d("Error:", "No 'file' found in first source")
-                }
-            } else {
-                Log.d("Error:", "No sources found in M3U8 data")
+                )
+            } else if (decodedLink.contains(".m3u8")) {
+                callback(
+                    newExtractorLink(
+                        name = "AsianLoad (m3u8)",
+                        source = "AsianLoad",
+                        url = decodedLink,
+                        type = ExtractorLinkType.M3U8
+                    ){
+                        this.referer = url
+                        this.quality = Qualities.Unknown.value
+                    }
+                )
             }
-
-            val tracks = result.optJSONArray("tracks") ?: JSONArray()
-            for (i in 0 until tracks.length()) {
-                val trackObj = tracks.optJSONObject(i) ?: continue
-                val label = trackObj.optString("label").trim().takeIf { it.isNotEmpty() }
-                val file = trackObj.optString("file").takeIf { it.isNotBlank() }
-                if (label != null && file != null) {
-                    subtitleCallback(newSubtitleFile(getLanguage(label) ?: label, file))
-                }
+            else {
+                Log.d("AsianLoad", "Decoded link is not a valid video URL: $decodedLink")
             }
-        } catch (_: JSONException) {
-            Log.e("Error", "Failed to parse M3U8 JSON")
         }
-      }
-
-    data class AnimeKaiResponse(
-        @param:JsonProperty("status") val status: Int,
-        @param:JsonProperty("result") val result: String
-    )
-
+    }
 }
+
+//Animedao
+
+class VibePlayer : ExtractorApi() {
+    override val name = "VibePlayer"
+    override val mainUrl = "https://vibeplayer.site"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer = referer).text
+
+        val videoUrl = Regex("""src\s=\s"(.*?)\"""")
+            .find(response)
+            ?.groupValues?.get(1)
+            ?.takeIf { it.isNotBlank() }
+            ?: return
+
+        M3u8Helper.generateM3u8(
+            name,
+            videoUrl,
+            "$mainUrl/",
+        ).forEach(callback)
+    }
+}
+
+class Playmogo: DoodLaExtractor() {
+    override var mainUrl = "https://playmogo.com"
+}
+
+class Otakuvid: VidHidePro() {
+    override var mainUrl = "https://otakuvid.online"
+}
+
+class Otakuhg: VidHidePro() {
+    override var mainUrl = "https://otakuhg.site"
+}
+
+//Allanime
+
+class Allanimeups : VidStack() {
+    override var mainUrl = "https://allanime.uns.bio"
+}
+
+class Bysekoze  : ByseSX() {
+    override var mainUrl = "https://bysekoze.com"
+}
+
 
 open class PpzjYoutube : ExtractorApi() {
     override val name = "PpzjYoutube"
@@ -1397,70 +1396,3 @@ open class PpzjYoutube : ExtractorApi() {
             .digest(input.toByteArray())
             .joinToString("") { "%02x".format(it) }
 }
-
-class Embedload : Asianload() {
-    override val name = "Embedload"
-    override val mainUrl = "https://embedload.cfd"
-    override val requiresReferer = false
-}
-
-open class Asianload : ExtractorApi() {
-    override val name = "Asianload"
-    override val mainUrl = "https://asianload.cfd"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(url).document
-        val script = document.selectFirst("div#player + script")?.html() ?: return
-        val unpacked = JsUnpacker(script).unpack() ?: return
-
-        val allBase64Links = mutableListOf<String>()
-
-        val base64Regex = Regex("""window\.atob\("([^"]+)"\)""")
-        
-        base64Regex.findAll(unpacked).forEach { match ->
-            val base64EncodedUrl = match.groupValues[1]
-            allBase64Links.add(base64EncodedUrl)
-        }
-
-
-        for (base64EncodedUrl in allBase64Links) {
-            val decodedLink = base64Decode(base64EncodedUrl)
-                        
-            if (decodedLink.contains(".mp4")) {
-                callback(
-                    newExtractorLink(
-                        name = "AsianLoad (mp4)",
-                        source = "AsianLoad",
-                        url = decodedLink,
-                        type = ExtractorLinkType.VIDEO
-                    ){
-                        this.referer = url
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-            } else if (decodedLink.contains(".m3u8")) { 
-                callback(
-                    newExtractorLink(
-                        name = "AsianLoad (m3u8)",
-                        source = "AsianLoad",
-                        url = decodedLink,
-                        type = ExtractorLinkType.M3U8
-                    ){
-                        this.referer = url
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-            }
-            else {
-                Log.d("AsianLoad", "Decoded link is not a valid video URL: $decodedLink")         
-            }
-        }
-    }
-}
-
