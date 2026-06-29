@@ -107,13 +107,13 @@ open class Videostr : ExtractorApi() {
     }
 }
 
-open class Gofile : ExtractorApi() {
+class Gofile : ExtractorApi() {
     override val name = "Gofile"
     override val mainUrl = "https://gofile.io"
     override val requiresReferer = false
     private val mainApi = "https://api.gofile.io"
-    private val browserLanguage = "en-GB"
-    private val secret = "5d4f7g8sd45fsd"
+    private val browserLanguage = "en-US"
+    private val secret = "9844d94d963d30"
 
     override suspend fun getUrl(
         url: String,
@@ -123,14 +123,18 @@ open class Gofile : ExtractorApi() {
     ) {
         val id = Regex("/(?:\\?c=|d/)([\\da-zA-Z-]+)").find(url)?.groupValues?.get(1) ?: return
 
+        val websiteTokenForAccountCreation = generateWebsiteToken(USER_AGENT, "")
+
         val token = app.post(
             "$mainApi/accounts",
+            headers = mapOf(
+                "X-Website-Token" to websiteTokenForAccountCreation,
+                "X-BL" to browserLanguage
+            )
         ).parsedSafe<AccountResponse>()?.data?.token ?: return
 
-        val currentTimeSeconds = System.currentTimeMillis() / 1000
-        val interval = (currentTimeSeconds / 14400).toString()
-        val message = listOf(USER_AGENT, browserLanguage, token, interval, secret).joinToString("::")
-        val hashedToken = sha256(message)
+
+        val hashedToken = generateWebsiteToken(USER_AGENT, token)
 
         val headers = mapOf(
             "Referer" to "$mainUrl/",
@@ -141,18 +145,18 @@ open class Gofile : ExtractorApi() {
         )
 
         val parsedResponse = app.get(
-            "$mainApi/contents/$id?contentFilter=&page=1&pageSize=1000&sortField=name&sortDirection=1",
+            "$mainApi/contents/$id?cache=true&sortField=createTime&sortDirection=1",
             headers = headers
         ).parsedSafe<GofileResponse>()
 
-        val childrenMap = parsedResponse?.data?.children ?: return
+        Log.d(name, "parsedResponse: $parsedResponse")
 
+        val childrenMap = parsedResponse?.data?.children ?: return
         for ((_, file) in childrenMap) {
             if (file.link.isNullOrEmpty() || file.type != "file") continue
             val fileName = file.name ?: ""
             val size = file.size ?: 0L
             val formattedSize = formatBytes(size)
-
             callback.invoke(
                 newExtractorLink(
                     "Gofile",
@@ -165,6 +169,12 @@ open class Gofile : ExtractorApi() {
                 }
             )
         }
+    }
+
+    private fun generateWebsiteToken(userAgent: String, accountToken: String): String {
+        val timeSlot = System.currentTimeMillis() / 1000 / 14400
+        val raw = "$userAgent::$browserLanguage::$accountToken::$timeSlot::$secret"
+        return sha256(raw)
     }
 
     private fun getQuality(str: String?): Int {
@@ -188,19 +198,15 @@ open class Gofile : ExtractorApi() {
     data class AccountResponse(
         @param:JsonProperty("data") val data: AccountData? = null
     )
-
     data class AccountData(
         @param:JsonProperty("token") val token: String? = null
     )
-
     data class GofileResponse(
         @param:JsonProperty("data") val data: GofileData? = null
     )
-
     data class GofileData(
         @param:JsonProperty("children") val children: Map<String, GofileFile>? = null
     )
-
     data class GofileFile(
         @param:JsonProperty("type") val type: String? = null,
         @param:JsonProperty("name") val name: String? = null,
@@ -275,7 +281,7 @@ class GdFlix2: GDFlix() {
 }
 
 class GDFlixNet : GDFlix() {
-    override var mainUrl = "https://new16.gdflix.*"
+    override var mainUrl = "https://new18.gdflix.*"
 }
 
 open class GDFlix : ExtractorApi() {
@@ -645,6 +651,11 @@ open class HubCloud : ExtractorApi() {
         return regex.find(html)?.groupValues?.get(1)
     }
 
+    fun extractDoubleAtob(html: String): String? {
+        val regex = Regex("""var\s+url\s*=\s*atob\s*\(\s*atob\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\)""")
+        return regex.find(html)?.groupValues?.get(1)?.let { base64Decode(base64Decode(it)) }
+    }
+
     override suspend fun getUrl(
         url: String,
         referer: String?,
@@ -673,7 +684,12 @@ open class HubCloud : ExtractorApi() {
         }
         else {
             val scriptTag = doc.selectFirst("script:containsData(url)")?.toString() ?: ""
-            Regex("var url = '([^']*)'").find(scriptTag) ?. groupValues ?. get(1) ?: ""
+
+            if(newUrl.contains("vcloud")) {
+                extractDoubleAtob(scriptTag) ?: ""
+            } else {
+                Regex("var url = '([^']*)'").find(scriptTag) ?. groupValues ?. get(1) ?: ""
+            }
         }
 
         if(!link.startsWith("https://")) link = baseUrl + link
@@ -716,6 +732,7 @@ open class HubCloud : ExtractorApi() {
                 if(redirectUrl.contains("link=")) redirectUrl = redirectUrl.substringAfter("link=")
                 myCallback(redirectUrl, "[Download]")
             }
+            else if (text.contains("Gofile")) loadExtractor(link, "", subtitleCallback, callback)
             else { Log.d("Error", "No Server matched") }
         }
     }
@@ -751,7 +768,7 @@ class Kwik : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val res = app.get(url, referer = url)
+        val res = app.get(url, referer = referer)
         val script =
             res.document.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data()
         val unpacked = getAndUnpack(script ?: return)
@@ -807,15 +824,18 @@ class Pahe : ExtractorApi() {
             allowRedirects = false
         ).headers["location"]!!.substringAfterLast("https://")
 
+        Log.d("Kwik", "Kwik URL: $kwikUrl")
+
         val fContent = app.get(
             kwikUrl,
-            headers = mapOf(
+            mapOf(
+                "User-Agent" to USER_AGENT,
                 "Referer"    to "https://kwik.cx/",
-                "User-Agent" to USER_AGENT
-            )
+            ),
         )
         val fContentString = fContent.text
 
+        Log.d("Kwik", "fcontent : ${fContentString.take(100)}")
 
         val (fullString, key, v1, v2) = kwikParamsRegex.find(fContentString)!!.destructured
         val decrypted = decrypt(fullString, key, v1.toInt(), v2.toInt())
@@ -885,7 +905,12 @@ class Akamaicdn : ExtractorApi() {
     }
 }
 
-class Cloudnestra : ExtractorApi() {
+
+class Cloudorchestranova : Cloudnestra() {
+    override val mainUrl: String = "https://cloudorchestranova.com"
+}
+
+open class Cloudnestra : ExtractorApi() {
     override val name = "Cloudnestra"
     override val mainUrl = "https://cloudnestra.com"
     override val requiresReferer = true
@@ -896,27 +921,31 @@ class Cloudnestra : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        Log.d(name, "url : $url")
+
         val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
-            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language" to "en-US,en;q=0.5",
+            "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language" to "en-GB,en-US;q=0.9,en;q=0.8",
             "Referer" to "$referer/",
-            "Sec-Fetch-Dest" to "iframe",
+            "Sec-Fetch-Dest" to "document",
             "Sec-Fetch-Mode" to "navigate",
-            "Sec-Fetch-Site" to "cross-site",
+            "Sec-Fetch-Site" to "none",
             "Upgrade-Insecure-Requests" to "1",
-            "Connection" to "keep-alive"
         )
 
         val iframeHtml = app.get(url, headers = headers).text
-
         val srcMatch = Regex("""src:\s*['"]([^'"]+)['"]""", RegexOption.IGNORE_CASE).find(iframeHtml)
         val prorcpSrc = srcMatch?.groupValues?.get(1) ?: return
+
+        Log.d(name, "cloudUrl : $mainUrl$prorcpSrc")
 
         val cloudHtml = app.get(
             url = "$mainUrl$prorcpSrc",
             headers = headers
         ).text
+
+        Log.d(name, "cloudHtml : $cloudHtml")
 
         val divMatch = Regex("""<div id="([^"]+)"[^>]*style=["']display\s*:\s*none;?["'][^>]*>([a-zA-Z0-9:\/.,{}\-_=+ ]+)</div>""", RegexOption.IGNORE_CASE).find(cloudHtml)
         val divId = divMatch?.groupValues?.get(1) ?: return
@@ -924,11 +953,15 @@ class Cloudnestra : ExtractorApi() {
 
         val requestBody = mapOf("text" to divText, "div_id" to divId)
 
+        Log.d(name, "requestBody : $requestBody")
+
         val decrypted = app.post(
             url = "$multiDecryptAPI/dec-cloudnestra",
             json = requestBody,
             headers = mapOf("Content-Type" to "application/json")
         ).text
+
+        Log.d(name, "decrypted : $decrypted")
 
         val jsonObject = JSONObject(decrypted)
         val status = jsonObject.getInt("status")
@@ -1013,8 +1046,10 @@ class FlixCloud : ExtractorApi() {
 
         data.remove("subtitles")
 
+        Log.d("FlixCloud", "Data to decrypt: $data")
+
         val resolvedRes = app.post(
-            "$multiDecryptAPI/dec-reanime?type=resolve",
+            "$multiDecryptAPI/dec-flixcloud?type=token",
             requestBody = JSONObject().put("data", data)
                 .toString()
                 .toRequestBody("application/json".toMediaType()),
@@ -1022,6 +1057,8 @@ class FlixCloud : ExtractorApi() {
         )
 
         val resolvedJson = JSONObject(resolvedRes.text)
+
+        Log.d("FlixCloud", "resolved json: $resolvedJson")
 
         val resolved = resolvedRes
             .parsedSafe<ResolvedReAnime>()
@@ -1035,15 +1072,17 @@ class FlixCloud : ExtractorApi() {
             )
         )
 
+        Log.d("FlixCloud", "Token response: ${tokenResponse.text}")
+
         val decryptBody = JSONObject()
             .put(
                 "data", JSONObject()
-                    .put("state", resolvedJson.getJSONObject("result").getJSONObject("state"))
-                    .put("token_response", JSONObject(tokenResponse.text))
+                    .put("context", resolvedJson.getJSONObject("result").getJSONObject("context"))
+                    .put("stream_response", JSONObject(tokenResponse.text))
             ).toString()
 
         val decrypted = app.post(
-            "$multiDecryptAPI/dec-reanime?type=decrypt",
+            "$multiDecryptAPI/dec-flixcloud?type=stream",
             requestBody = decryptBody.toRequestBody("application/json".toMediaType()),
             timeout = 10000L
         ).parsedSafe<ReAnimeStream>()?.result ?: return
@@ -1065,11 +1104,27 @@ class FlixCloud : ExtractorApi() {
             "user-agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
         )
 
+        Log.d("FlixCloud", "Decrypted: ${decrypted}")
+
+        val stream = decrypted.stream
+
+        val wPayload = decrypted.context.wPayload
+
+        val parseManifest = "$multiDecryptAPI/parse-flixcloud?url=$stream&w_payload=$wPayload"
+
+        Log.d("FlixCloud", "parseManifest: ${parseManifest}")
+
+        // val manifestResponse = app.get(
+        //     parseManifest,
+        //     referer = "$mainUrl/"
+        // ).text
+
+
         callback.invoke(
             newExtractorLink(
                 name,
                 name,
-                decrypted.stream,
+                parseManifest,
                 ExtractorLinkType.M3U8
             ) {
                 this.headers = videoHeaders

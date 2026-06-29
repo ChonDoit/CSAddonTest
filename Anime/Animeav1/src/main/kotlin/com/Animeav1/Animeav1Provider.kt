@@ -1,4 +1,4 @@
-package com.Animeav1
+﻿package com.Animeav1
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
