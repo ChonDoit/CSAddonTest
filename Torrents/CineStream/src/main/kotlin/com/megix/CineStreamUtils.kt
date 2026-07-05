@@ -1341,27 +1341,6 @@ fun extractXpassBackups(html: String): List<Pair<String, String>> {
 }
 
 
-//Mapple
-fun solvePowChallenge(challenge: String, difficulty: Int): String? {
-    val target = BigInteger.ONE.shiftLeft(256 - difficulty)
-    val md = MessageDigest.getInstance("SHA-256")
-
-    var nonce = 0L
-    while (true) {
-        val input = challenge + nonce.toString()
-        val hashBytes = md.digest(input.toByteArray())
-        val hashInt = BigInteger(1, hashBytes)
-
-        if (hashInt < target) {
-            return nonce.toString()
-        }
-
-        nonce++
-        md.reset()
-        if (nonce > 10_000_000) return null
-    }
-}
-
 //Peachify
 fun peachifyDecrypt(encrypt: String): String? {
     return try {
@@ -1371,7 +1350,7 @@ fun peachifyDecrypt(encrypt: String): String? {
         val iv         = b64UrlDecode(parts[0])
         val cipherData = b64UrlDecode(parts[1]) + b64UrlDecode(parts[2])
 
-        val keyBytes = "a8f2a1b5e9c470814f6b2c3a5d8e7f9c1a2b3c4d5e3f7a8b8cad1e2d0a4d5c5b"
+        val keyBytes = "a8f2a1b5e9c470814f6b2c3a5d8e7f9c1a2b3c4d5e3f7a8b8cad1e2d0a4d5c5d"
             .chunked(2)
             .map { it.toInt(16).toByte() }
             .toByteArray()
@@ -1694,4 +1673,34 @@ fun decodeToBeParsed(encoded: String): String? {
         e.printStackTrace()
         null
     }
+}
+
+//Lordflix
+
+fun sha256Hex(input: String): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+    return digest.joinToString("") { "%02x".format(it) }
+}
+
+suspend fun solveLordflixChallenge(headers: Map<String, String>): String? {
+    val challenge = app.get("$lordflixAPI/challenge", headers = headers)
+        .parsedSafe<LordflixChallenge>() ?: return null
+
+    var solvedNumber = -1
+    for (number in 0..challenge.maxnumber) {
+        if (sha256Hex("${challenge.salt}$number") == challenge.challenge) {
+            solvedNumber = number
+            break
+        }
+    }
+    if (solvedNumber == -1) return null
+
+    val payload = JSONObject().apply {
+        put("algorithm", challenge.algorithm)
+        put("challenge", challenge.challenge)
+        put("number", solvedNumber)
+        put("salt", challenge.salt)
+        put("signature", challenge.signature)
+    }
+    return base64Encode(payload.toString().toByteArray())
 }

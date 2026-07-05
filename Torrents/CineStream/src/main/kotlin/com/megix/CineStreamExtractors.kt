@@ -780,15 +780,10 @@ object CineStreamExtractors {
             "myflixerzupcloud",
             "1movies",
             "downloader2",
-            "primewire",
             "m4uhd",
             "hdmovie",
             "cdn",
-            "primesrcme",
-            "visioncine",
-            "overflix",
             "superflix",
-            "cuevana",
             "lamovie",
             "mb-flix",
         )
@@ -857,117 +852,6 @@ object CineStreamExtractors {
                         )
                     )
                 }
-            }
-        }
-    }
-
-    suspend fun invokeMapple(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        if (tmdbId == null) return
-
-        val base = mappleAPI.removeSuffix("/")
-
-        val mediaType = if (season == null) "movie" else "tv"
-        val tvSlug = if (season != null && episode != null) "$season-$episode" else ""
-
-        val headers = mapOf(
-            "User-Agent" to USER_AGENT,
-            "Referer" to "$base/",
-            "Origin" to base,
-            "Accept" to "*/*",
-            "Content-Type" to "application/json"
-        )
-
-        val watchUrl = if (mediaType == "movie") {
-            "$base/watch/movie/$tmdbId"
-        } else {
-            "$base/watch/tv/$tmdbId/$tvSlug"
-        }
-
-        val page = app.get(watchUrl, headers = headers).text
-        val tokenRegex = Regex("""window\.__REQUEST_TOKEN__\s*=\s*"([^"]+)\"""")
-        val requestToken = tokenRegex.find(page)?.groupValues?.get(1) ?: return
-
-        val tokenRes1 = JSONObject(
-            app.post(
-                "$base/api/stream-token",
-                json = mapOf(
-                    "mediaId"      to tmdbId,
-                    "mediaType"    to mediaType,
-                    "requestToken" to requestToken
-                ),
-                headers = headers
-            ).text
-        )
-
-        if (!tokenRes1.optBoolean("success")) return
-
-        val finalToken = if (tokenRes1.optBoolean("requiresPow")) {
-            val pow = tokenRes1.getJSONObject("pow")
-
-            val nonce = solvePowChallenge(
-                pow.getString("challenge"),
-                pow.getInt("difficulty")
-            ) ?: return
-
-            val tokenRes2 = JSONObject(
-                app.post(
-                    "$base/api/stream-token",
-                    json = mapOf(
-                        "mediaId"      to tmdbId,
-                        "mediaType"    to mediaType,
-                        "requestToken" to requestToken,
-                        "pow"          to mapOf(
-                            "challengeId" to pow.getString("challengeId"),
-                            "nonce"       to nonce
-                        )
-                    ),
-                    headers = headers
-                ).text
-            )
-
-            if (!tokenRes2.optBoolean("success")) return
-            tokenRes2.getString("token")
-        } else {
-            tokenRes1.getString("token")
-        }
-
-        val sources = listOf(
-            "mapple",
-            "willow",
-            "cherry",
-            "pines",
-            "oak",
-            "sequoia",
-            "sakura",
-            "magnolia"
-        )
-
-        sources.safeAmap { source ->
-            val streamUrl =
-                "$base/api/stream?mediaId=$tmdbId&mediaType=$mediaType&tv_slug=$tvSlug" +
-                        "&source=$source&apikey=mptv_sk_a8f29c4e7b3d1f" +
-                        "&requestToken=$requestToken&token=$finalToken"
-
-            val streamRes = JSONObject(app.get(streamUrl, headers = headers).text)
-
-            if (!streamRes.optBoolean("success")) return@safeAmap
-
-            val m3u8 = streamRes
-                .getJSONObject("data")
-                .optString("stream_url")
-
-            if (m3u8.isNotEmpty()) {
-                M3u8Helper.generateM3u8(
-                    "Mapple [${source.capitalizeServer()}]",
-                    m3u8,
-                    "$base/",
-                    headers = headers
-                ).forEach(callback)
             }
         }
     }
@@ -2963,71 +2847,6 @@ object CineStreamExtractors {
         }
     }
 
-    suspend fun invokeVicSrcWtf(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-        subtitleCallback: (SubtitleFile) -> Unit,
-    ) {
-        val referer = "https://www.vidsrc.wtf"
-        val headers = mapOf(
-            "Origin" to referer,
-            "Referer" to "$referer/",
-            "User-Agent" to USER_AGENT,
-        )
-
-        try {
-            val mainServer = if(season == null) "$vidSrcApi/main/movie/$tmdbId" else "$vidSrcApi/main/tv/$tmdbId/$season/$episode"
-            val mainResponse = app.get(mainServer, timeout = 30, headers = headers).text
-            val jsonObject = JSONObject(mainResponse)
-            val streamUrl = jsonObject.getJSONObject("stream").getString("url")
-            M3u8Helper.generateM3u8(
-                "VidSrc [Main]",
-                streamUrl,
-                referer,
-            ).forEach(callback)
-        } catch (e: Exception) {}
-
-        try {
-            val hindiServer =
-                if (season == null) "$vidSrcHindiApi/movie/$tmdbId" else "$vidSrcHindiApi/tv/$tmdbId/$season/$episode"
-            val hindiResponse = app.get(hindiServer, timeout = 30, headers = headers).text
-            val hindiJsonObject = JSONObject(hindiResponse)
-            val streamsArray = hindiJsonObject.getJSONArray("streams")
-            for (i in 0 until streamsArray.length()) {
-                val streamObj = streamsArray.getJSONObject(i)
-                val language = streamObj.getString("language")
-                val url = streamObj.getString("url")
-                // Convert headers JSONObject to Map<String, String>
-                val headersJson = streamObj.getJSONObject("headers")
-                val headersMap = mutableMapOf<String, String>()
-                headersJson.keys().forEach { key ->
-                    headersMap[key] = headersJson.getString(key)
-                }
-                M3u8Helper.generateM3u8(
-                    "VidSrc [$language]",
-                    url,
-                    headersJson.getString("Referer"),
-                    headers = headersMap
-                ).forEach(callback)
-
-            }
-        } catch (e: Exception) { }
-
-        try {
-            val embededServer = if(season == null) "$vidSrcApi/premium_embeds/movie/$tmdbId" else "$vidSrcApi/premium_embeds/tv/$tmdbId/$season/$episode"
-            val embededResponse = app.get(embededServer, timeout = 30, headers = headers).text
-            val embededJsonObject = JSONObject(embededResponse)
-            val linksArray = embededJsonObject.getJSONArray("links")
-            for (i in 0 until linksArray.length()) {
-                val streamObj = linksArray.getJSONObject(i)
-                val url = streamObj.getString("url")
-                loadSourceNameExtractor("VidSrc", url, "", subtitleCallback, callback)
-            }
-        } catch (e: Exception) { }
-    }
-
     suspend fun invokeVidzee(
         id: Int?,
         season: Int? = null,
@@ -3954,6 +3773,63 @@ object CineStreamExtractors {
 
     }
 
+    suspend fun invokeFshare(
+        title: String? = null,
+        imdbId: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+
+        fun String?.qualityInt(): Int = this?.toIntOrNull() ?: 0
+
+        val slug = "$title episode 1 $imdbId".createSlug()
+
+        val url = "$fshareAPI/w/$slug"
+
+        Log.d("Fshare", "url: $url")
+
+        val doc = app.get(url).document
+
+        val regex = Regex("""Movie\.setSource\('([^']+)'""")
+        val match = regex.find(doc.toString())
+        val token = match?.groupValues?.get(1) ?: return
+
+        Log.d("Fshare", "token: $token")
+
+        val trailer = doc.selectFirst("input#trailer")?.attr("value") ?: return
+
+        Log.d("Fshare", "trailer: $trailer")
+
+        val json = app.get("$fshareAPI/api/file/$token/source?trailer=$trailer&type=watch").text
+
+        Log.d("Fshare", "json: $json")
+
+        val parsed = tryParseJson<FshareResponse>(json) ?: return
+
+        val allSources = parsed.data.file.sources + parsed.data.file.alternatives.flatten()
+
+        val headers = mapOf(
+            "referer" to url,
+            "user-agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+        )
+
+        allSources.distinctBy { it.id }.forEach { source ->
+            callback(
+                newExtractorLink(
+                    "Fshare",
+                    "Fshare",
+                    fshareAPI + source.src,
+                    ExtractorLinkType.VIDEO
+                ) {
+                    this.quality = source.quality.qualityInt()
+                    this.headers = headers
+                }
+            )
+        }
+
+    }
+
+
     suspend fun invokeAv1encodes(
         title: String? = null,
         season: Int? = null,
@@ -4196,9 +4072,7 @@ object CineStreamExtractors {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-
-        if(title == null || imdbId == null || tmdbId == null) return
-
+        if (title == null || imdbId == null || tmdbId == null) return
         val headers = mapOf(
             "Accept" to "*/*",
             "Origin" to lordflixBaseAPI,
@@ -4206,38 +4080,33 @@ object CineStreamExtractors {
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
         )
 
-        val servers = listOf("Berlin", "Tokyo", "Bogota", "Oslo", "Luna", "LordFlix", "Sakura", "Rio", "Ativa")
+        val servers = app.get("$lordflixAPI/servers", headers = headers)
+            .parsedSafe<LordflixServersResponse>()?.servers?.mapNotNull { it.name }
+            ?: return
 
         servers.safeAmap { server ->
-
             val serverUrl = buildString {
                 append("$lordflixAPI/?title=${quote(title)}&type=")
-                if(season == null) append("movie")
-                if(season != null) append("series")
+                if (season == null) append("movie")
+                if (season != null) append("series")
                 append("&year=$year&imdb=$imdbId&tmdb=$tmdbId&server=$server")
-                if (season  != null) append("&season=$season")
+                if (season != null) append("&season=$season")
                 if (episode != null) append("&episode=$episode")
             }
 
             val encData = app.get("$multiDecryptAPI/enc-lordflix?url=${quote(serverUrl)}").text
             val encJson = JSONObject(encData)
             if (encJson.getInt("status") != 200) return@safeAmap
-
             val result = encJson.getJSONObject("result")
             val encUrl = result.getString("url")
-            val sign   = result.getString("sign")
+            val attestToken = solveLordflixChallenge(headers) ?: return@safeAmap
+            val mediaHeaders = headers + mapOf("x-attest" to attestToken)
 
-            val encData2 = app.get(encUrl, headers = headers).text
-
-
+            val encData2 = app.get(encUrl, headers = mediaHeaders).text
             val decResponse = app.post(
                 "$multiDecryptAPI/dec-lordflix",
-                json = mapOf(
-                    "text" to encData2,
-                    "sign" to sign
-                )
+                json = mapOf("text" to encData2)
             ).parsedSafe<LordflixDecResponse>() ?: return@safeAmap
-
             if (decResponse.status != 200) return@safeAmap
             val decResult = decResponse.result ?: return@safeAmap
             if (decResult.error != null) return@safeAmap
@@ -4250,7 +4119,6 @@ object CineStreamExtractors {
             when (stream.type) {
                 "hls" -> {
                     val playlist = stream.playlist ?: return@safeAmap
-
                     callback.invoke(
                         newExtractorLink(
                             "Lordflix[$server]",
@@ -4263,7 +4131,6 @@ object CineStreamExtractors {
                     )
                 }
             }
-
         }
     }
 
@@ -4287,9 +4154,9 @@ object CineStreamExtractors {
         val servers = listOf(
             "https://usa.eat-peach.sbs/holly",
             "https://usa.eat-peach.sbs/multi",
-            "https://usa.eat-peach.sbs/ice",
             "https://usa.eat-peach.sbs/air",
-            "https://usa.eat-peach.sbs/net",
+            "https://uwu.eat-peach.sbs/net",
+            "https://uwu.eat-peach.sbs/moviebox"
         )
 
         servers.safeAmap { server ->
@@ -4368,7 +4235,7 @@ object CineStreamExtractors {
         val query = if(season == null) "$title $year" else "$title S${seasonSlug}E${episodeSlug}"
 
         val headers = mapOf(
-            "referer" to "mkvBaseAPI/",
+            "referer" to "$mkvBaseAPI/",
             "x-requested-with" to "XMLHttpRequest"
         )
 
@@ -4447,21 +4314,17 @@ object CineStreamExtractors {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val searchUrl = "$anikageAPI/api/media/anime/advanced-search?query=$title&sort=trending&page=1&per_page=25&include_adult=true"
+        val searchUrl = "$anikageAPI/api/media/anime/browse?q=$title&sort=popularity&page=1&limit=25&adult=true"
         val searchRes = app.get(searchUrl).parsedSafe<AnikageSearch>() ?: return
-
-        val match = searchRes.results?.find { it.anilistId == aniId } ?: return
+        val match = searchRes.data?.find { it.anilistId == aniId } ?: return
         val slug = match.slug ?: return
 
         Log.d("Anikage", "slug: $slug")
 
         val serversUrl = "$anikageAPI/api/media/anime/$slug/episodes/${episode ?: 1}/servers"
-
         val serversResponse = app.get(serversUrl).text
-        val servers = tryParseJson<List<AnikageServer>>(serversResponse) ?: return
-
-        // val servers = app.get(serversUrl).parsedSafe<List<AnikageServer>>() ?: return
-        val serverIds = servers.mapNotNull { it.id }
+        val parsed = tryParseJson<AnikageServersResponse>(serversResponse) ?: return
+        val serverIds = parsed.servers?.mapNotNull { it.id } ?: return
 
         Log.d("Anikage", "serverIds: $serverIds")
 
@@ -4525,14 +4388,16 @@ object CineStreamExtractors {
         callback: (ExtractorLink) -> Unit,
     ) {
 
-        val searchUrl = "$animedaoAPI/search.html?keyword=$title&year%5B%5D=$year&sort=title_az"
+        // val searchUrl = "$animedaoAPI/search.html?keyword=$title&year%5B%5D=$year&sort=title_az"
 
-        val matchedUrl = app.get(searchUrl, referer = "$animedaoAPI/")
-            .document
-            .selectFirst("article.an-anime-card > a")
-            ?.attr("href")
-            ?.replace("/anime/", "/watch-online/")
-            ?: return
+        // val matchedUrl = app.get(searchUrl, referer = "$animedaoAPI/")
+        //     .document
+        //     .selectFirst("article.an-anime-card > a")
+        //     ?.attr("href")
+        //     ?.replace("/anime/", "/watch-online/")
+        //     ?: return
+
+        val matchedUrl = "$animedaoAPI/watch-online/${title.createSlug()}"
 
         Log.d("AnimeDao", "matchedUrl: $matchedUrl")
 

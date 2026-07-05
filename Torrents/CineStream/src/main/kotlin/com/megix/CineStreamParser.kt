@@ -800,6 +800,23 @@ data class AnimeSaltData(
 
 //Lordflix
 
+data class LordflixServer(
+    val name: String
+)
+
+data class LordflixServersResponse(
+    val servers: List<LordflixServer>?
+)
+
+data class LordflixChallenge(
+    val algorithm: String,
+    val challenge: String,
+    val maxnumber: Int,
+    val salt: String,
+    val signature: String
+)
+
+
 data class LordflixCaption(
     val url: String,
     val language: String?
@@ -924,16 +941,30 @@ data class VidcoreStreamData(
 )
 
 //Anikage
+
 data class AnikageSearch(
-    @param:JsonProperty("results") val results: List<AnikageResult>? = null
+    @param:JsonProperty("count") val count: Int? = null,
+    @param:JsonProperty("data") val data: List<AnikageResult>? = null
 )
+
 data class AnikageResult(
     @param:JsonProperty("slug") val slug: String? = null,
     @param:JsonProperty("anilistId") val anilistId: Int? = null,
 )
-data class AnikageServer(
-    @param:JsonProperty("id") val id: String? = null,
+
+data class AnikageServersResponse(
+    val servers: List<AnikageServer>? = null,
+    val embeds: List<AnikageEmbeds>? = null
 )
+
+data class AnikageServer(
+    val id: String? = null,
+)
+
+data class AnikageEmbeds(
+    val id: String? = null,
+)
+
 data class AnikageSource(
     @param:JsonProperty("sources") val sources: List<AnikageStreamSource>? = null,
     @param:JsonProperty("subtitles") val subtitles: List<AnikageSub>? = null,
@@ -952,4 +983,38 @@ data class AnikageStreamSource(
     @param:JsonProperty("url") val url: String? = null,
     @param:JsonProperty("quality") val quality: String? = null,
     @param:JsonProperty("isM3U8") val isM3U8: Boolean? = null,
+)
+
+//Fshare
+
+data class FshareDownload(
+    val src: String,
+    val label: String
+)
+
+data class FshareFile(
+    val sources: List<FshareSource>,
+    val backups: List<FshareSource>,
+    val alternatives: List<List<FshareSource>>,
+    val downloads: List<FshareDownload>?,
+    val vast: Int?
+)
+
+data class FshareData(
+    val file: FshareFile
+)
+
+data class FshareResponse(
+    val data: FshareData,
+    val status: String
+)
+
+data class FshareSource(
+    val src: String,
+    val label: String,
+    val type: String,
+    val quality: String?,
+    val storage: String,
+    val id: String,
+    val selected: Boolean? = null
 )
