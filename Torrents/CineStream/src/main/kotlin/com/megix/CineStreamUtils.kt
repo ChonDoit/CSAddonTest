@@ -51,6 +51,7 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import java.math.BigInteger
+import kotlin.math.min
 
 // Settings
 import com.megix.settings.Settings
@@ -1106,147 +1107,6 @@ suspend fun generateMagnetLink(url: String, hash: String?): String {
     }
 }
 
-//Allanime
-fun decrypthex(inputStr: String): String {
-    val hexString = if (inputStr.startsWith("-")) {
-        inputStr.substringAfterLast("-")
-    } else {
-        inputStr
-    }
-
-    val bytes = ByteArray(hexString.length / 2) { i ->
-        val hexByte = hexString.substring(i * 2, i * 2 + 2)
-        (hexByte.toInt(16) and 0xFF).toByte()
-    }
-
-    return bytes.joinToString("") { (it.toInt() xor 56).toChar().toString() }
-}
-
-suspend fun getM3u8Qualities(
-    m3u8Link: String,
-    referer: String,
-    qualityName: String,
-): List<ExtractorLink> {
-    return M3u8Helper.generateM3u8(
-        qualityName,
-        m3u8Link,
-        referer
-    )
-}
-
-fun String.fixUrlPath(): String {
-    return if (this.contains(".json?")) "https://allanime.day" + this
-    else "https://allanime.day" + URI(this).path + ".json?" + URI(this).query
-}
-
-fun fixSourceUrls(url: String, source: String?): String? {
-    return if (source == "Ak" || url.contains("/player/vitemb")) {
-        tryParseJson<AkIframe>(base64Decode(url.substringAfter("=")))?.idUrl
-    } else {
-        url.replace(" ", "%20")
-    }
-}
-
-fun getGojoId(jsonString: String, title: String): String? {
-
-    val results = JSONObject(jsonString).getJSONArray("results")
-
-    for( i in 0 until results.length() ) {
-        val item = results.getJSONObject(i)
-
-        val titleObject = item.optJSONObject("title") ?: continue
-
-        val englishTitle = titleObject.optString("english", "")
-        val romajiTitle = titleObject.optString("romaji", "")
-
-        if (englishTitle.equals(title, ignoreCase = true) ||
-            romajiTitle.equals(title, ignoreCase = true)) {
-            return item.getString("id")
-        }
-    }
-
-    // for (i in 0 until results.length()) {
-    //     val item = results.getJSONObject(i)
-    //     if (item.optInt("anilist_id") == aniId) {
-    //         return item.getString("id")
-    //     }
-    // }
-
-    return null
-}
-
-fun getGojoServers(jsonString: String): List<String> {
-    val jsonArray = JSONArray(jsonString)
-    val ids = mutableListOf<String>()
-
-    for (i in 0 until jsonArray.length()) {
-        val id = jsonArray.getJSONObject(i).optString("id")
-        if (id.isNotEmpty()) {
-            ids.add(id)
-        }
-    }
-    return ids
-}
-
-suspend fun getGojoStreams(
-    json: String,
-    lang: String,
-    provider: String,
-    gojoBaseAPI: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-) {
-    try {
-        val headers = mapOf(
-            "User-Agent" to USER_AGENT,
-            "Referer" to "$gojoBaseAPI/",
-            "Origin" to gojoBaseAPI
-        )
-
-        val jsonObject = JSONObject(json)
-        val serverName = jsonObject.optString("server", "")
-        if(serverName != provider) return
-        val sourcesArray = jsonObject.optJSONArray("sources") ?: return
-
-        for (i in 0 until sourcesArray.length()) {
-            val source = sourcesArray.optJSONObject(i) ?: continue
-            val url = source.optString("url").takeIf { it.isNotEmpty() } ?: continue
-            val videoType = source.optString("type", "m3u8")
-            val quality = source.optString("quality").replace("p", "").toIntOrNull()
-
-            callback.invoke(
-                newExtractorLink(
-                    "Animetsu [${lang.uppercase()}] [${provider.uppercase()}]",
-                    "Animetsu [${lang.uppercase()}] [${provider.uppercase()}]",
-                    fixUrl(url, "https://swiftstream.top/proxy"),
-                    type = if (videoType == "video/mp4") ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-                ) {
-                    this.quality = quality ?: Qualities.P1080.value
-                    this.referer = gojoBaseAPI
-                    this.headers = headers
-                }
-            )
-        }
-
-        val subtitles = jsonObject.optJSONArray("subtitles") ?: return
-
-        for (i in 0 until subtitles.length()) {
-            val item = subtitles.optJSONObject(i) ?: continue
-            val url = item.optString("url").takeIf { it.isNotEmpty() } ?: continue
-            val lang = item.optString("lang").takeIf { it.isNotEmpty() } ?: continue
-
-            subtitleCallback.invoke(
-                newSubtitleFile(
-                    getLanguage(lang) ?: lang,
-                    url
-                )
-            )
-        }
-    } catch (e: Exception) {
-        println("Error parsing Gojo streams for $provider [$lang]: ${e.message}")
-    }
-}
-
 suspend fun getRedirectLinks(url: String): String {
     fun encode(value: String): String {
         return base64Encode(value.toByteArray())
@@ -1316,15 +1176,37 @@ fun decryptVidzeeUrl(encryptedUrl: String, secret: String): String? {
     }
 }
 
-fun getVidrockUrlEncode(itemId: String): String {
-    val passphrase = "x7k9mPqT2rWvY8zA5bC3nF6hJ2lK4mN9"
-    val keyBytes = passphrase.toByteArray(Charsets.UTF_8)
-    val ivBytes = keyBytes.copyOfRange(0, 16)
-    val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-    cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(keyBytes, "AES"), IvParameterSpec(ivBytes))
-    val encryptedBytes = cipher.doFinal(itemId.toByteArray(Charsets.UTF_8))
-    val base64Encoded = base64Encode(encryptedBytes)
-    return URLEncoder.encode(base64Encoded, "UTF-8").replace("%2F", "/")
+
+//Vidrock
+
+fun decryptVidrockUrl(encryptedPayload: String): String? {
+    return try {
+        val aesKeyHex = "7f3e9c2a8b5d1f4e6a9c3b7d2e5f8a1c4b6d9e2f5a8c1b4d7e9f2a5c8b1d4e7f"
+        val keyBytes = aesKeyHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+        var standardBase64 = encryptedPayload.replace("-", "+").replace("_", "/")
+
+        while (standardBase64.length % 4 != 0) {
+            standardBase64 += "="
+        }
+
+        val encryptedData = base64DecodeArray(standardBase64)
+
+        val nonce = encryptedData.copyOfRange(0, 12)
+        val cipherTextWithTag = encryptedData.copyOfRange(12, encryptedData.size)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val keySpec = SecretKeySpec(keyBytes, "AES")
+        val gcmSpec = GCMParameterSpec(128, nonce)
+
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
+        val decryptedBytes = cipher.doFinal(cipherTextWithTag)
+
+        String(decryptedBytes, Charsets.UTF_8)
+    } catch (e: Exception) {
+        Log.e("Vidrock", "Decryption failed")
+        null
+    }
 }
 
 //Xpass
@@ -1675,32 +1557,299 @@ fun decodeToBeParsed(encoded: String): String? {
     }
 }
 
-//Lordflix
+//Castle
 
-fun sha256Hex(input: String): String {
-    val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-    return digest.joinToString("") { "%02x".format(it) }
+val castleHeaders = mapOf(
+    "User-Agent" to "okhttp/4.9.3",
+    "Accept" to "application/json",
+    "Accept-Language" to "en-US,en;q=0.9",
+    "Connection" to "Keep-Alive",
+    "Referer" to "$castleAPI/"
+)
+
+fun decryptCastle(cipherText: String, base64Key: String): String {
+    val pepperWords = "T!BgJB".toByteArray(Charsets.UTF_8)
+
+    val keyWords = base64DecodeArray(base64Key)
+    val combined = keyWords + pepperWords
+
+    val keyMaterial = ByteArray(16)
+    System.arraycopy(combined, 0, keyMaterial, 0, min(combined.size, 16))
+
+    val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+    val secretKeySpec = SecretKeySpec(keyMaterial, "AES")
+    val ivParameterSpec = IvParameterSpec(keyMaterial)
+
+    cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+
+    val cipherBytes = base64DecodeArray(cipherText)
+
+    return String(cipher.doFinal(cipherBytes), Charsets.UTF_8)
 }
 
-suspend fun solveLordflixChallenge(headers: Map<String, String>): String? {
-    val challenge = app.get("$lordflixAPI/challenge", headers = headers)
-        .parsedSafe<LordflixChallenge>() ?: return null
+suspend fun getCastleSecurityKey(url: String): String {
+    val response = app.get(url, headers = castleHeaders).text
+    val json = JSONObject(response)
+    return json.optString("data")
+}
 
-    var solvedNumber = -1
-    for (number in 0..challenge.maxnumber) {
-        if (sha256Hex("${challenge.salt}$number") == challenge.challenge) {
-            solvedNumber = number
-            break
+suspend fun makeCastleApiRequest(
+    url: String,
+    securityKey: String,
+    method: String = "GET",
+    jsonBody: Any? = null
+): JSONObject {
+    val response = if (method == "POST" && jsonBody != null) {
+        app.post(url, headers = castleHeaders, json = jsonBody).text
+    } else {
+        app.get(url, headers = castleHeaders).text
+    }.trim()
+
+    val cipherText = try {
+        val tempJson = JSONObject(response)
+        if (tempJson.has("data") && tempJson.get("data") is String) {
+            tempJson.getString("data")
+        } else {
+            response
+        }
+    } catch (e: Exception) {
+        response
+    }
+
+    val decryptedStr = decryptCastle(cipherText, securityKey)
+
+    val finalJson = JSONObject(decryptedStr)
+    return finalJson.optJSONObject("data") ?: finalJson
+}
+
+//CtgMovies
+
+fun unescapeNextChunk(raw: String): String {
+    val sb = StringBuilder(raw.length)
+    var i = 0
+    while (i < raw.length) {
+        val c = raw[i]
+        if (c == '\\' && i + 1 < raw.length) {
+            when (raw[i + 1]) {
+                '"' -> { sb.append('"'); i += 2 }
+                '\\' -> { sb.append('\\'); i += 2 }
+                'n' -> { sb.append('\n'); i += 2 }
+                't' -> { sb.append('\t'); i += 2 }
+                'u' -> {
+                    if (i + 5 < raw.length) {
+                        val hex = raw.substring(i + 2, i + 6)
+                        sb.append(hex.toInt(16).toChar())
+                        i += 6
+                    } else { sb.append(c); i++ }
+                }
+                else -> { sb.append(raw[i + 1]); i += 2 }
+            }
+        } else {
+            sb.append(c); i++
         }
     }
-    if (solvedNumber == -1) return null
+    return sb.toString()
+}
 
-    val payload = JSONObject().apply {
-        put("algorithm", challenge.algorithm)
-        put("challenge", challenge.challenge)
-        put("number", solvedNumber)
-        put("salt", challenge.salt)
-        put("signature", challenge.signature)
+// Concatenate every self.__next_f.push chunk into one big decoded blob
+fun buildRscBlob(html: String): String {
+    val NEXT_F_PREFIX = "self.__next_f.push([1,\""
+    val NEXT_F_SUFFIX = "\"])"
+    val blob = StringBuilder()
+    var searchFrom = 0
+    while (true) {
+        val start = html.indexOf(NEXT_F_PREFIX, searchFrom)
+        if (start == -1) break
+        val contentStart = start + NEXT_F_PREFIX.length
+        val end = html.indexOf(NEXT_F_SUFFIX, contentStart)
+        if (end == -1) break
+        val raw = html.substring(contentStart, end)
+        blob.append(unescapeNextChunk(raw))
+        searchFrom = end + NEXT_F_SUFFIX.length
     }
-    return base64Encode(payload.toString().toByteArray())
+    return blob.toString()
+}
+
+// Extract EVERY balanced "links":[...] JSON array found in the blob.
+fun extractAllLinksArraysJson(blob: String): List<String> {
+    val key = "\"links\":["
+    val results = mutableListOf<String>()
+    var searchFrom = 0
+    while (true) {
+        val keyIdx = blob.indexOf(key, searchFrom)
+        if (keyIdx == -1) break
+        val arrStart = keyIdx + key.length - 1 // position of '['
+        var depth = 0
+        var i = arrStart
+        var arrEnd = -1
+        while (i < blob.length) {
+            when (blob[i]) {
+                '[' -> depth++
+                ']' -> {
+                    depth--
+                    if (depth == 0) { arrEnd = i; break }
+                }
+            }
+            i++
+        }
+        if (arrEnd == -1) break
+        results.add(blob.substring(arrStart, arrEnd + 1))
+        searchFrom = arrEnd + 1
+    }
+    return results
+}
+
+fun parseCtgLinks(html: String): List<CTGLink> {
+    val blob = buildRscBlob(html)
+    val arrJsonList = extractAllLinksArraysJson(blob)
+    if (arrJsonList.isEmpty()) return emptyList()
+
+    val result = mutableListOf<CTGLink>()
+    for (arrJson in arrJsonList) {
+        val arr = runCatching { JSONArray(arrJson) }.getOrNull() ?: continue
+        for (idx in 0 until arr.length()) {
+            val obj = arr.optJSONObject(idx) ?: continue
+            val url = obj.optString("url").takeIf { it.isNotBlank() } ?: continue
+
+            val audioTracks = mutableListOf<Pair<String, String>>()
+            obj.optJSONArray("audio_tracks")?.let { tracksArr ->
+                for (j in 0 until tracksArr.length()) {
+                    val t = tracksArr.optJSONObject(j) ?: continue
+                    val aUrl = t.optString("url")
+                    val label = t.optString("label", t.optString("language", ""))
+                    if (aUrl.isNotBlank()) audioTracks.add(aUrl to label)
+                }
+            }
+
+            result.add(
+                CTGLink(
+                    quality = obj.optString("quality"),
+                    url = url,
+                    hlsUrl = obj.optString("hls_url").takeIf { it.isNotBlank() && it != "null" },
+                    type = obj.optString("type"),
+                    source = obj.optString("source"),
+                    language = obj.optString("language"),
+                    sizeBytes = obj.optLong("size_bytes", -1L).takeIf { it >= 0 },
+                    seasonNumber = obj.optInt("season_number", -1).takeIf { it >= 0 },
+                    episodeNumber = obj.optInt("episode_number", -1).takeIf { it >= 0 },
+                    audioTracks = audioTracks
+                )
+            )
+        }
+    }
+
+    // Dedup in case the same link array got captured twice via overlapping matches
+    return result.distinctBy { it.url }
+}
+
+//MovieBlast
+
+fun generateSignedUrl(url: String): String? {
+    return try {
+        val uri = URI(url)
+
+        val path = uri.rawPath
+
+        val timestamp = (System.currentTimeMillis() / 1000).toString()
+
+        val mac = Mac.getInstance("HmacSHA256")
+        val secretKeySpec = SecretKeySpec(MOVIEBLAST_KEY.toByteArray(Charsets.UTF_8), "HmacSHA256")
+        mac.init(secretKeySpec)
+
+        val hmacData = mac.doFinal((path + timestamp).toByteArray(Charsets.UTF_8))
+
+        val signature = base64Encode(hmacData)
+        val encodedSignature = URLEncoder.encode(signature, "UTF-8")
+
+        "$url?verify=$timestamp-$encodedSignature"
+    } catch (e: Exception) {
+        null
+    }
+}
+
+//Fibwatch
+
+val fibwatchHeaders = mapOf(
+    "User-Agent" to USER_AGENT,
+    "Referer" to "$fibwatchBaseUrl/"
+)
+
+val fibwatchPlaybackHeaders = mapOf(
+    "User-Agent" to USER_AGENT,
+    "Referer" to "https://urlshortlink.top/",
+    "Origin" to "https://urlshortlink.top"
+)
+
+fun extractFibwatchQuality(raw: String?): String {
+    val lower = raw?.lowercase() ?: ""
+    return when {
+        lower.contains("2160") || lower.contains("4k") -> "4K"
+        lower.contains("1080") -> "1080p"
+        lower.contains("720") -> "720p"
+        lower.contains("480") -> "480p"
+        lower.contains("360") -> "360p"
+        else -> "Unknown"
+    }
+}
+
+suspend fun resolveFibwatchStream(initialUrl: String, fallbackQuality: String): Pair<String, String>? {
+    var currentUrl = initialUrl
+    var html = runCatching { app.get(currentUrl, headers = fibwatchHeaders).text }.getOrNull() ?: return null
+
+    val doc1 = Jsoup.parse(html)
+
+    val genericMediaRegex = Regex("""https?://[a-zA-Z0-9-.]+(?:/[^\s"'`<>]*)?\.(?:mp4|mkv|m3u8)""", RegexOption.IGNORE_CASE)
+    val fibwatchCdnRegex = Regex("""https?://[a-zA-Z0-9-]+\.b-cdn\.net/[^\s"'`<>]+\.(?:mkv|mp4|m3u8)""", RegexOption.IGNORE_CASE)
+
+    var nextPath = doc1.selectFirst("a.hidden-button.buttonDownloadnew")?.attr("href")
+    if (nextPath.isNullOrBlank()) {
+        nextPath = doc1.select("a").firstOrNull { it.attr("href").contains("watch2=1") }?.attr("href")
+    }
+
+    if (!nextPath.isNullOrBlank()) {
+        var targetUrl = nextPath
+        if (nextPath.contains("url=http")) {
+            val encoded = nextPath.substringAfter("url=").substringBefore("&").trim()
+            targetUrl = runCatching { URLDecoder.decode(encoded, "UTF-8") }.getOrDefault(encoded)
+            if (genericMediaRegex.containsMatchIn(targetUrl) || fibwatchCdnRegex.containsMatchIn(targetUrl)) {
+                return targetUrl to fallbackQuality
+            }
+        }
+
+        currentUrl = URI(currentUrl).resolve(targetUrl).toString()
+        html = runCatching { app.get(currentUrl, headers = fibwatchHeaders).text }.getOrNull() ?: return null
+    }
+
+    val doc2 = Jsoup.parse(html)
+    var streamUrl = fibwatchCdnRegex.find(html)?.value
+
+    if (streamUrl == null) {
+        val iframeSrc = doc2.select("iframe").map { it.attr("src") }
+            .firstOrNull { it.isNotBlank() && !it.contains("youtube") && !it.contains("google") }
+
+        if (iframeSrc != null) {
+            val absoluteIframeUrl = URI(currentUrl).resolve(iframeSrc).toString()
+            val iframeHtml = runCatching { app.get(absoluteIframeUrl, headers = fibwatchPlaybackHeaders).text }.getOrNull()
+            if (iframeHtml != null) {
+                streamUrl = fibwatchCdnRegex.find(iframeHtml)?.value ?: genericMediaRegex.find(iframeHtml)?.value
+            }
+        }
+    }
+
+    if (streamUrl == null) {
+        streamUrl = genericMediaRegex.find(html)?.value
+    }
+
+    if (streamUrl != null) {
+        if (streamUrl.contains("url=http", ignoreCase = true)) {
+            val encoded = streamUrl.substringAfter("url=").substringBefore("&").trim()
+            streamUrl = runCatching { URLDecoder.decode(encoded, "UTF-8") }.getOrDefault(encoded)
+        }
+
+        val realQuality = extractFibwatchQuality(streamUrl)
+        val finalQuality = if (realQuality != "Unknown") realQuality else fallbackQuality
+        return streamUrl to finalQuality
+    }
+
+    return null
 }

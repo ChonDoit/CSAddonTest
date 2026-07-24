@@ -167,12 +167,25 @@ data class AnimetoshoRelease(
 )
 
 //Vidlink
+
 data class VidlinkResponse(
-    @param:JsonProperty("stream") val stream: VidlinkStream
+    @param:JsonProperty("stream") val stream: VidlinkStream?
 )
 
 data class VidlinkStream(
-    @param:JsonProperty("playlist") val playlist: String
+    @param:JsonProperty("qualities") val qualities: Map<String, VidlinkQuality>? = null,
+    @param:JsonProperty("captions") val captions: List<VidlinkCaption>? = null
+)
+
+data class VidlinkQuality(
+    @param:JsonProperty("type") val type: String?,
+    @param:JsonProperty("url") val url: String?
+)
+
+data class VidlinkCaption(
+    @param:JsonProperty("url") val url: String?,
+    @param:JsonProperty("language") val language: String?,
+    @param:JsonProperty("type") val type: String?
 )
 
 data class TmdbDate(
@@ -407,125 +420,6 @@ data class VegaDocument(
     val post_title: String,
     val permalink: String,
     val post_thumbnail: String
-)
-
-//Anichi
-
-@Serializable
-data class EncryptedResponse(
-    val data: EncryptedData? = null
-)
-
-@Serializable
-data class EncryptedData(
-    val _m: String? = null,
-    val tobeparsed: String? = null
-)
-
-data class AkIframe(
-    @param:JsonProperty("idUrl") val idUrl: String? = null,
-)
-
-data class AnichiVideoApiResponse(@param:JsonProperty("links") val links: List<AnichiLinks>)
-
-data class AnichiStream(
-    @param:JsonProperty("format") val format: String? = null,
-    @param:JsonProperty("audio_lang") val audio_lang: String? = null,
-    @param:JsonProperty("hardsub_lang") val hardsub_lang: String? = null,
-    @param:JsonProperty("url") val url: String? = null,
-)
-
-data class PortData(
-    @param:JsonProperty("streams") val streams: ArrayList<AnichiStream>? = arrayListOf(),
-)
-
-data class AnichiSubtitles(
-    @param:JsonProperty("lang") val lang: String?,
-    @param:JsonProperty("label") val label: String?,
-    @param:JsonProperty("src") val src: String?,
-)
-
-data class AnichiLinks(
-    @param:JsonProperty("link") val link: String,
-    @param:JsonProperty("hls") val hls: Boolean? = null,
-    @param:JsonProperty("resolutionStr") val resolutionStr: String,
-    @param:JsonProperty("src") val src: String? = null,
-    @param:JsonProperty("headers") val headers: Headers? = null,
-    @param:JsonProperty("portData") val portData: PortData? = null,
-    @param:JsonProperty("subtitles") val subtitles: ArrayList<AnichiSubtitles>? = arrayListOf(),
-)
-
-data class Headers(
-    @param:JsonProperty("Referer") val referer: String? = null,
-    @param:JsonProperty("Origin") val origin: String? = null,
-    @param:JsonProperty("user-agent") val userAgent: String? = null,
-)
-
-
-data class Anichi(
-    val data: AnichiData,
-)
-
-data class AnichiData(
-    val shows: AnichiShows,
-)
-
-data class AnichiShows(
-    val pageInfo: PageInfo,
-    val edges: List<Edge>,
-)
-
-data class PageInfo(
-    val total: Long,
-)
-
-data class Edge(
-    @param:JsonProperty("_id")
-    val id: String,
-    val name: String,
-    val englishName: String,
-    val nativeName: String,
-)
-
-//Anichi Ep Parser
-
-data class AnichiEP(
-    val data: AnichiEPData? = null,
-    val episode: AnichiEpisode? = null,
-)
-
-data class AnichiEPData(
-    val episode: AnichiEpisode? = null,
-)
-
-data class AnichiEpisode(
-    val sourceUrls: List<SourceUrl> = emptyList(),
-)
-
-data class SourceUrl(
-    val sourceUrl: String,
-    val sourceName: String,
-    val downloads: AnichiDownloads? = null,
-)
-
-data class AnichiDownloads(
-    val sourceName: String? = null,
-    val downloadUrl: String? = null,
-)
-
-//Anichi Download URL Parser
-
-data class AnichiDownload(
-    val links: List<AnichiDownloadLink>,
-)
-
-data class AnichiDownloadLink(
-    val link: String,
-    val hls: Boolean,
-    val mp4: Boolean?,
-    val resolutionStr: String,
-    val priority: Long,
-    val src: String?,
 )
 
 data class AnimiaResponse(
@@ -798,46 +692,6 @@ data class AnimeSaltData(
     val securedLink: String? = null,
 )
 
-//Lordflix
-
-data class LordflixServer(
-    val name: String
-)
-
-data class LordflixServersResponse(
-    val servers: List<LordflixServer>?
-)
-
-data class LordflixChallenge(
-    val algorithm: String,
-    val challenge: String,
-    val maxnumber: Int,
-    val salt: String,
-    val signature: String
-)
-
-
-data class LordflixCaption(
-    val url: String,
-    val language: String?
-)
-
-data class LordflixStream(
-    val type: String,
-    val playlist: String? = null,
-    val captions: List<LordflixCaption>? = null
-)
-
-data class LordflixDecResult(
-    val stream: List<LordflixStream>? = null,
-    val error: String? = null
-)
-
-data class LordflixDecResponse(
-    val status: Int,
-    val result: LordflixDecResult? = null
-)
-
 //Zinkmovies
 
 data class ZinkTokenResponse(
@@ -889,18 +743,6 @@ data class AnidbLanguage(
     val code: String? = null,
     val name: String? = null,
     @param:JsonProperty("embed_url") val embedUrl: String? = null
-)
-
-
-//MkvBase
-
-data class MkvBaseResponse(
-    val results: List< MkvBaseSearchResult>? = null,
-)
-
-data class  MkvBaseSearchResult(
-    val title: String? = null,
-    val url: String? = null,
 )
 
 //Vidcore
@@ -1017,4 +859,194 @@ data class FshareSource(
     val storage: String,
     val id: String,
     val selected: Boolean? = null
+)
+
+//VaPlayer
+
+data class VaPlayerResponse(
+    val status_code: String? = null,
+    val data: VaPlayerData? = null,
+    val default_subs: List<VaPlayerSub>? = null
+)
+
+data class VaPlayerData(
+    val title: String? = null,
+    val imdb_id: String? = null,
+    val season: String? = null,
+    val episode: String? = null,
+    val file_name: String? = null,
+    val backdrop: String? = null,
+    val stream_urls: List<String>? = null
+)
+
+data class VaPlayerSub(
+    val lang: String? = null,
+    val code: String? = null,
+    val url: String? = null
+)
+
+//Anikoto
+
+data class AnikotoResponse(
+    val status: Int,
+    val result: String
+)
+
+data class AnikotoServerResponse(
+    val status: Int? = null,
+    val result: AnikotoServerResult? = null
+)
+
+data class AnikotoServerResult(
+    val url: String? = null,
+)
+
+//HdGharTv
+
+data class HdGharSearchResponse(
+    val movies: List<HdGharSearchItem>? = null,
+    val series: List<HdGharSearchItem>? = null
+)
+
+data class HdGharSearchItem(
+    @param:JsonProperty("_id") val id: String? = null,
+    val tmdbId: Int? = null
+)
+
+data class HdGharDetailsResponse(
+    val streamingLinks: List<HdGharLink>? = null, // For Movies
+    val seasons: List<HdGharSeason>? = null              // For Series
+)
+
+data class HdGharSeason(
+    val seasonNumber: Int? = null,
+    val episodes: List<HdGharEpisode>? = null
+)
+
+data class HdGharEpisode(
+    val episodeNumber: Int? = null,
+    val streamingLinks: List<HdGharLink>? = null
+)
+
+data class HdGharLink(
+    val quality: String? = null,
+    val url: String? = null,
+    val type: String? = null
+)
+
+//CtgMovies
+
+data class CTGLink(
+    val quality: String,
+    val url: String,
+    val hlsUrl: String?,
+    val type: String,
+    val source: String,
+    val language: String,
+    val sizeBytes: Long?,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+    val audioTracks: List<Pair<String, String>>
+)
+
+//MovieBlast
+
+data class MovieBlastSearchResponse(
+    @param:JsonProperty("search") val search: List<MovieBlastSearchItem>?
+)
+
+data class MovieBlastSearchItem(
+    @param:JsonProperty("id") val id: Int?,
+    @param:JsonProperty("type") val type: String?,
+    @param:JsonProperty("name") val name: String?,
+    @param:JsonProperty("original_name") val originalName: String?
+)
+
+data class MovieBlastDetailsResponse(
+    @param:JsonProperty("videos") val videos: List<MovieBlastVideo>?,
+    @param:JsonProperty("seasons") val seasons: List<MovieBlastSeason>?,
+    @param:JsonProperty("substitles") val subtitles: List<MovieBlastSubtitle>?
+)
+
+data class MovieBlastSeason(
+    @param:JsonProperty("season_number") val seasonNumber: Int?,
+    @param:JsonProperty("episodes") val episodes: List<MovieBlastEpisode>?
+)
+
+data class MovieBlastEpisode(
+    @param:JsonProperty("episode_number") val episodeNumber: Int?,
+    @param:JsonProperty("videos") val videos: List<MovieBlastVideo>?
+)
+
+data class MovieBlastVideo(
+    @param:JsonProperty("link") val link: String?,
+    @param:JsonProperty("server") val server: String?,
+    @param:JsonProperty("lang") val lang: String?
+)
+
+data class MovieBlastSubtitle(
+    @param:JsonProperty("link") val link: String?,
+    @param:JsonProperty("lang") val lang: String?
+)
+
+//Vidup
+
+data class VidupResponse(
+    val status: Int? = null,
+    val result: VidupResult? = null,
+    val info: String? = null
+)
+
+data class VidupResult(
+    val servers: String? = null,
+    val stream: String? = null,
+    val token: String? = null
+)
+
+data class VidupServersResponse(
+    val status: Int? = null,
+    val result: List<VidupServer>? = null
+)
+
+data class VidupServer(
+    val name: String? = null,
+    val description: String? = null,
+    val image: String? = null,
+    val data: String? = null
+)
+
+data class VidupStreamResponse(
+    val status: Int? = null,
+    val result: VidupStreamResult? = null
+)
+
+data class VidupStreamResult(
+    val url: String? = null,
+    val tracks: List<VidupTrack>? = emptyList()
+)
+
+data class VidupTrack(
+    val file: String? = null,
+    val label: String? = null
+)
+
+//Fibwatch
+
+data class FibwatchEpisode(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("url") val url: String? = null
+)
+
+data class FibwatchEpisodesResponse(
+    @JsonProperty("episodes") val episodes: List<FibwatchEpisode>? = null
+)
+
+data class FibwatchSource(
+    @JsonProperty("url") val url: String? = null,
+    @JsonProperty("res") val res: String? = null
+)
+
+data class FibwatchSwitcherResponse(
+    @JsonProperty("current") val current: List<FibwatchSource>? = null,
+    @JsonProperty("popup") val popup: List<FibwatchSource>? = null
 )
